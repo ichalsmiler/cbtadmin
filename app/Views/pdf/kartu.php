@@ -1,34 +1,40 @@
 <?php
-use App\Libraries\School;
-
-$tanggal = School::tanggal(time(), false);
-// Tiap ruang/kelas dimulai di halaman baru; 8 kartu per halaman dengan label kelompok di atasnya.
+// Kartu login peserta (seperti contoh AIOCBT): logo, judul + kegiatan + tahun, QR login; nama, kelas,
+// username, password, ruang / jam ujian per tingkatan; kotak catatan. 8 kartu per halaman A4,
+// tiap ruang/kelas mulai di halaman baru dengan label kelompok di atasnya.
 $pages = [];
 foreach ($groups as $label => $rows) {
     foreach (array_chunk($rows, 8) as $i => $chunk) {
         $pages[] = ['label' => $label, 'part' => $i + 1, 'parts' => (int) ceil(count($rows) / 8), 'count' => count($rows), 'rows' => $chunk];
     }
 }
+$kegiatan = mb_strtoupper($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer');
+$tahun    = $school['tahun_ajaran'] !== '' ? 'TAHUN PELAJARAN ' . mb_strtoupper($school['tahun_ajaran']) : '';
 ?>
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
 <?= view('pdf/_style') ?>
 <style>
     @page { margin: 8mm; }
+    body { font-family: "DejaVu Sans", sans-serif; }
     table.grid { width: 100%; border-collapse: separate; border-spacing: 3mm 2.5mm; }
     table.grid > tbody > tr > td { width: 50%; vertical-align: top; padding: 0; }
-    .kartu { border: 1px solid #333; height: 58mm; padding: 1.8mm 2.5mm; font-size: 7.2pt; line-height: 1.25; }
+    .kartu { border: 1px solid #555; border-radius: 2.5mm; height: 59mm; padding: 2mm 3mm; font-size: 8pt; }
     .kartu table { width: 100%; border-collapse: collapse; }
-    .kartu .head { border-bottom: 1px solid #333; margin-bottom: 1.2mm; }
+    .kartu .head { border-bottom: 1px solid #555; margin-bottom: 1.5mm; }
     .kartu .head td { vertical-align: middle; padding-bottom: 1mm; }
-    .kartu .head img { height: 9mm; width: auto; }
-    .kartu .judul { font-weight: bold; font-size: 8.5pt; }
-    .kartu .kecil { font-size: 6.3pt; }
-    .kartu .isi td { padding: 0.2mm 1mm 0.2mm 0; vertical-align: top; }
-    .kartu .nw { white-space: nowrap; }
-    .kartu .akun { font-family: "DejaVu Sans Mono", monospace; font-weight: bold; font-size: 8.2pt; white-space: nowrap; }
-    .kartu .ttd { font-size: 6.3pt; text-align: center; line-height: 1.2; }
-    .kartu .ttd .space { height: 7mm; }
+    .kartu .head .logo { width: 12mm; }
+    .kartu .head .logo img { height: 11mm; width: auto; }
+    .kartu .head .qr { width: 14mm; text-align: right; }
+    .kartu .head .qr img { width: 13mm; height: 13mm; }
+    .kartu .judul { text-align: center; font-weight: bold; font-size: 8.3pt; line-height: 1.2; }
+    .kartu .isi td { padding: 0.55mm 0; vertical-align: top; }
+    .kartu .isi .lbl { width: 25mm; }
+    .kartu .isi .ttk { width: 4mm; }
+    .kartu .akun { font-weight: bold; font-size: 9.5pt; }
+    .kartu .catatan { border: 1px solid #333; margin-top: 1.5mm; }
+    .kartu .catatan .judul-catatan { font-weight: bold; font-style: italic; border-bottom: 1px solid #333; padding: 0.6mm 1.5mm; }
+    .kartu .catatan .teks { padding: 0.8mm 1.5mm; font-size: 7.6pt; }
     .kelompok { font-size: 8pt; font-weight: bold; margin: 0 3mm; border-bottom: 1px solid #999; padding-bottom: 0.5mm; }
     .kelompok span { font-weight: normal; color: #555; }
 </style>
@@ -47,40 +53,29 @@ foreach ($groups as $label => $rows) {
                         <div class="kartu">
                             <table class="head">
                                 <tr>
-                                    <?php if ($school['logo']): ?><td style="width:12mm"><img src="<?= $school['logo'] ?>" alt=""></td><?php endif ?>
-                                    <td>
-                                        <div class="judul">KARTU PESERTA</div>
-                                        <div class="kecil"><?= esc($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer') ?><?= $school['tahun_ajaran'] !== '' ? ' ' . esc($school['tahun_ajaran']) : '' ?></div>
-                                        <div class="kecil"><?= esc($school['nama_sekolah']) ?></div>
+                                    <td class="logo"><?php if ($school['logo']): ?><img src="<?= $school['logo'] ?>" alt=""><?php endif ?></td>
+                                    <td class="judul">
+                                        KARTU LOGIN PESERTA<br>
+                                        <?= esc($kegiatan) ?>
+                                        <?= $tahun !== '' ? '<br>' . esc($tahun) : '' ?>
                                     </td>
+                                    <td class="qr"><img src="<?= $r['qr'] ?>" alt=""></td>
                                 </tr>
                             </table>
                             <table class="isi">
-                                <tr><td style="width:15mm" class="nw">No. Peserta</td><td>: <?= esc($r['nomor_peserta']) ?></td></tr>
-                                <tr><td>Nama</td><td>: <strong><?= esc($r['nama']) ?></strong></td></tr>
-                                <tr><td>Kelas</td><td>: <?= esc($r['kelas']) ?></td></tr>
-                                <tr><td class="nw">Ruang/Sesi</td><td>: <?= esc($r['ruang_nama'] ?? '-') ?><?= $r['sesi_nama'] ? ' / ' . esc($r['sesi_nama']) : '' ?></td></tr>
+                                <tr><td class="lbl">Nama Peserta</td><td class="ttk">:</td><td><?= esc($r['nama']) ?></td></tr>
+                                <tr><td class="lbl">Kelas</td><td class="ttk">:</td><td><?= esc($r['kelas']) ?></td></tr>
+                                <tr><td class="lbl">Username Login</td><td class="ttk">:</td><td class="akun"><?= esc($r['username']) ?></td></tr>
+                                <tr><td class="lbl">Password Login</td><td class="ttk">:</td><td class="akun"><?= esc((string) $r['password_plain']) ?></td></tr>
+                                <tr><td class="lbl">Ruang Ujian</td><td class="ttk">:</td>
+                                    <td><?= esc($r['ruang_nama'] ?? '-') ?><?= $r['jam'] !== '' ? ' / ' . esc($r['jam']) : ($r['sesi_nama'] ? ' / ' . esc($r['sesi_nama']) : '') ?></td></tr>
                             </table>
-                            <table style="margin-top:1mm">
-                                <tr>
-                                    <td style="width:52%; vertical-align:top">
-                                        <table class="isi">
-                                            <tr><td style="width:15mm" class="nw">Username</td><td class="akun">:&nbsp;<?= esc($r['username']) ?></td></tr>
-                                            <tr><td class="nw">Password</td><td class="akun">:&nbsp;<?= esc((string) $r['password_plain']) ?></td></tr>
-                                        </table>
-                                    </td>
-                                    <td class="ttd" style="vertical-align:top">
-                                        <?= esc($school['kota'] !== '' ? $school['kota'] . ', ' : '') . $tanggal ?><br><?= esc($school['jabatan']) ?>
-                                        <?php if ($school['ttd']): ?>
-                                            <div class="space"><img src="<?= $school['ttd'] ?>" alt="" style="height:7mm; width:auto"></div>
-                                        <?php else: ?>
-                                            <div class="space"></div>
-                                        <?php endif ?>
-                                        <strong><?= esc($school['kepala_sekolah'] !== '' ? $school['kepala_sekolah'] : '........................') ?></strong><br>
-                                        <?= $school['nip_kepala'] !== '' ? esc($school['jenis_nomor']) . ' ' . esc($school['nip_kepala']) : '' ?>
-                                    </td>
-                                </tr>
-                            </table>
+                            <?php if (trim($catatan) !== ''): ?>
+                                <div class="catatan">
+                                    <div class="judul-catatan">Catatan:</div>
+                                    <div class="teks"><?= esc($catatan) ?></div>
+                                </div>
+                            <?php endif ?>
                         </div>
                     </td>
                 <?php endforeach ?>

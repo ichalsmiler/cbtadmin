@@ -7,7 +7,11 @@ use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\Pdf;
 use App\Libraries\QuizStatus;
+use App\Libraries\Settings;
 use App\Libraries\Tingkat;
+use chillerlan\QRCode\Output\QRGdImagePNG;
+use chillerlan\QRCode\QRCode;
+use chillerlan\QRCode\QROptions;
 
 class Dokumen extends PanelController
 {
@@ -51,7 +55,27 @@ class Dokumen extends PanelController
         uksort($groups, 'strnatcasecmp');
         ActivityLog::add('cetak_kartu', count($rows) . ' kartu, per ' . ($perKelas ? 'kelas' : 'ruang') . ', ' . count($groups) . ' kelompok');
 
-        return Pdf::respond('pdf/kartu', ['groups' => $groups], 'kartu_peserta_per_' . ($perKelas ? 'kelas' : 'ruang') . '.pdf');
+        // Jam ujian per tingkatan (Tools → Info Kegiatan) dan QR login Moodle dengan username terisi.
+        $jam = [];
+        foreach (Tingkat::LIST as $t) {
+            $mulai   = Settings::get('jam_' . $t . '_mulai');
+            $selesai = Settings::get('jam_' . $t . '_selesai');
+            $jam[$t] = $mulai !== '' ? $mulai . ($selesai !== '' ? ' - ' . $selesai : '') : '';
+        }
+        $qr = new QRCode(new QROptions(['outputInterface' => QRGdImagePNG::class, 'scale' => 3, 'quietzoneSize' => 1, 'outputBase64' => true]));
+        foreach ($groups as &$anggota) {
+            foreach ($anggota as &$r) {
+                $r['jam'] = $jam[Tingkat::of($r['kelas'])] ?? '';
+                $r['qr']  = $qr->render(Moodle::url('/login/index.php?username=' . rawurlencode((string) $r['username'])));
+            }
+            unset($r);
+        }
+        unset($anggota);
+
+        return Pdf::respond('pdf/kartu', [
+            'groups'  => $groups,
+            'catatan' => Settings::get('catatan_kartu', 'Kartu peserta wajib dibawa selama ujian berlangsung.'),
+        ], 'kartu_peserta_per_' . ($perKelas ? 'kelas' : 'ruang') . '.pdf');
     }
 
     public function daftarHadir()

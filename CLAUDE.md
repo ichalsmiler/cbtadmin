@@ -37,7 +37,7 @@ Menu → controller:
 | Laporan Kehadiran | Kehadiran | absensi pengawas; tidak hadir → suspend Moodle hari itu (`Absensi`) |
 | Blokir Siswa | BlokirSiswa | `Libraries/Blokir.php`, tabel `blokir`; tidak dibuka oleh absensi |
 | Daftar Ruang | Ruang | kode login pengawas `NPSN-<huruf><no><2 acak>` (`Pengawas::usernameFor`), Tukar Akses, Generate Kode, Cetak ID Login (`pdf/id_login`), nama lab (`ruang.lokasi`) |
-| Dokumen | Dokumen | kartu per ruang/kelas (`pdf/kartu`), daftar hadir, berita acara, absensi ruang |
+| Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: QR login Moodle via chillerlan/php-qrcode, jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir, berita acara, absensi ruang |
 | Hasil Ujian / No Attempt | HasilUjian / NoAttempt | |
 | Tools | Tools | accordion: Moodle Tools (Kelola Test `tools/test_manage`, Cron, Purge/Delete cache, Anti Submit) + CBTAdmin Tools (Info Sekolah, Info Kegiatan, Lock/Resume/Anti Newtab, Ganti Password) + Lainnya (akun, panel, backup, log) |
 

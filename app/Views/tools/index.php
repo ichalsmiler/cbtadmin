@@ -75,6 +75,14 @@ $input = static fn (string $name, string $label, string $value, string $ph = '',
             . '<form method="post" action="' . site_url('tools') . '">' . $csrf . '<input type="hidden" name="bagian" value="kegiatan"><div class="row g-3">'
             . $input('nama_kegiatan', 'Nama kegiatan', $v('nama_kegiatan'), 'Nama Kegiatan', 'col-md-8')
             . $input('tahun_ajaran', 'Tahun pelajaran', $v('tahun_ajaran'), 'Cth: 2026/2027', 'col-md-4')
+            . '<div class="col-12 small text-muted mb-n2">Jam ujian per tingkatan, dicetak di kartu peserta: <em>Ruang Ujian : 1 / 08:00 - 10:00</em>. Kosongkan bila tidak dipakai.</div>'
+            . implode('', array_map(static fn (string $t): string =>
+                '<div class="col-md-4"><label class="form-label" for="f_jam_' . $t . '_mulai">Kelas ' . $t . '</label><div class="input-group">'
+                . '<input class="form-control" type="time" id="f_jam_' . $t . '_mulai" name="jam_' . $t . '_mulai" value="' . esc($v('jam_' . $t . '_mulai'), 'attr') . '" aria-label="Kelas ' . $t . ' mulai">'
+                . '<span class="input-group-text">–</span>'
+                . '<input class="form-control" type="time" name="jam_' . $t . '_selesai" value="' . esc($v('jam_' . $t . '_selesai'), 'attr') . '" aria-label="Kelas ' . $t . ' selesai"></div></div>',
+                \App\Libraries\Tingkat::LIST))
+            . $input('catatan_kartu', 'Catatan di kartu peserta', $v('catatan_kartu', 'Kartu peserta wajib dibawa selama ujian berlangsung.'), 'Kartu peserta wajib dibawa selama ujian berlangsung.', 'col-12')
             . '</div><button class="btn btn-success btn-sm mt-3" type="submit"><i class="bi bi-save me-1"></i>Simpan</button></form>') ?>
         <?= $item('cbtTools', 'lockres', 'shield-lock', 'Lock login / Resume timer / Anti Newtab',
             '<form method="post" action="' . site_url('tools/ujian') . '">' . $csrf . '<input type="hidden" name="bagian" value="aturan">'
