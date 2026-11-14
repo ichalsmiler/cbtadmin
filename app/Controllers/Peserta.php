@@ -53,7 +53,8 @@ class Peserta extends PanelController
         $ruangId = (int) $this->request->getPost('ruang_id');
         $sesiId  = (int) $this->request->getPost('sesi_id');
         $data    = [
-            'nomor_peserta' => mb_substr(trim((string) $this->request->getPost('nomor_peserta')), 0, 40),
+            // No. Peserta kosong = pakai username.
+            'nomor_peserta' => mb_substr(trim((string) $this->request->getPost('nomor_peserta')) ?: $username, 0, 40),
             'nama'          => mb_substr($nama, 0, 150),
             'kelas'         => mb_substr(trim((string) $this->request->getPost('kelas')), 0, 60),
             'username'      => $username,
@@ -196,7 +197,6 @@ class Peserta extends PanelController
             }
 
             $data = [
-                'nomor_peserta' => mb_substr($row['nomor_peserta'] ?? '', 0, 40),
                 'nama'          => mb_substr($row['nama'], 0, 150),
                 'kelas'         => mb_substr($row['kelas'] ?? '', 0, 60),
                 'username'      => $username,
@@ -219,6 +219,14 @@ class Peserta extends PanelController
             }
 
             $old = $db->table('peserta')->where('username', $username)->get()->getRowArray();
+            // No. Peserta dari berkas; bila tidak ada (template AIOCBT), pakai username.
+            // Nomor yang sudah ada tidak ditimpa username.
+            $nomor = mb_substr(trim((string) ($row['nomor_peserta'] ?? '')), 0, 40);
+            if ($nomor !== '') {
+                $data['nomor_peserta'] = $nomor;
+            } elseif (! $old || (string) $old['nomor_peserta'] === '') {
+                $data['nomor_peserta'] = $username;
+            }
             if ($old) {
                 $db->table('peserta')->where('id', $old['id'])->update($data);
                 $ubah++;

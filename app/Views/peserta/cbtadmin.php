@@ -112,7 +112,7 @@
             <input type="hidden" name="id">
             <div class="modal-header"><h5 class="modal-title">Peserta</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button></div>
             <div class="modal-body row g-3">
-                <div class="col-sm-5"><label class="form-label">No. peserta</label><input class="form-control" name="nomor_peserta" maxlength="40"></div>
+                <div class="col-sm-5"><label class="form-label">No. peserta</label><input class="form-control" name="nomor_peserta" maxlength="40" placeholder="kosong = sama dengan username"></div>
                 <div class="col-sm-7"><label class="form-label">Kelas</label><input class="form-control" name="kelas" maxlength="60"></div>
                 <div class="col-12"><label class="form-label">Nama</label><input class="form-control" name="nama" maxlength="150" required></div>
                 <div class="col-sm-6"><label class="form-label">Username</label><input class="form-control" name="username" maxlength="100" pattern="[A-Za-z0-9._@\-]{2,100}" required></div>
