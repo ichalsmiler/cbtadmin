@@ -80,9 +80,10 @@ class Moodle
     /** Kategori kursus Moodle, berurutan seperti di Moodle. */
     public static function categories(): array
     {
-        return self::db()->table(self::t('course_categories'))
-            ->select('id, name, parent, path, depth, coursecount, visible')
-            ->orderBy('sortorder')
+        // Jumlah course dihitung langsung; kolom coursecount Moodle bisa tertinggal setelah course dihapus.
+        return self::db()->table(self::t('course_categories') . ' cc')
+            ->select('cc.id, cc.name, cc.parent, cc.path, cc.depth, cc.visible, (SELECT COUNT(*) FROM ' . self::t('course') . ' c WHERE c.category = cc.id) AS coursecount', false)
+            ->orderBy('cc.sortorder')
             ->get()->getResultArray();
     }
 
