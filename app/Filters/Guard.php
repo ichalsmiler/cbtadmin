@@ -56,11 +56,33 @@ class Guard implements FilterInterface
             $session->set('last_seen', time());
         }
 
-        if ($session->get('admin_role') !== 'admin' && str_starts_with($path, 'tools')) {
-            return redirect()->to(site_url('/'))->with('error', 'Menu Tools hanya untuk administrator.');
+        if (! self::allowed((string) $session->get('admin_role'), $path)) {
+            if ($request->isAJAX()) {
+                return service('response')->setStatusCode(403)->setJSON(['error' => 'Hanya untuk administrator.']);
+            }
+
+            return redirect()->to(site_url('/'))->with('error', 'Menu itu hanya untuk administrator.');
         }
 
         return null;
+    }
+
+    /** Halaman yang boleh dibuka pengawas (proktor); administrator boleh semua. */
+    private const PROKTOR_PATHS = ['', 'dashboard/stats', 'status_peserta', 'reset_login', 'token', 'status_tes/token', 'logout'];
+
+    public static function allowed(string $role, string $path): bool
+    {
+        if ($role === 'admin') {
+            return true;
+        }
+        $path = trim($path, '/');
+        foreach (self::PROKTOR_PATHS as $allowed) {
+            if ($path === $allowed || ($allowed !== '' && str_starts_with($path, $allowed . '/'))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function after(RequestInterface $request, ResponseInterface $response, $arguments = null)

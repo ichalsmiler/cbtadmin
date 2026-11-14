@@ -177,11 +177,12 @@
         start: function (url, seconds) {
             var format = new Intl.NumberFormat('id-ID');
             var apply = function (data) {
-                ['ruang', 'users', 'aktif', 'belum'].forEach(function (key) {
+                ['ruang', 'users', 'aktif', 'belum', 'sudah'].forEach(function (key) {
                     var el = document.querySelector('[data-stat="' + key + '"]');
-                    if (el) { el.textContent = data[key] === null ? '–' : format.format(data[key]); }
+                    if (el) { el.textContent = data[key] === null || data[key] === undefined ? '–' : format.format(data[key]); }
                 });
                 document.getElementById('moodleError').classList.toggle('d-none', !data.moodleError);
+                if (!data.sys) { return; } // pengawas: tanpa informasi server
                 ['cpu', 'mem', 'disk'].forEach(function (key) {
                     var bar = document.querySelector('[data-sys-bar="' + key + '"]');
                     var percent = data.sys[key].percent;

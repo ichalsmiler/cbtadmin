@@ -42,6 +42,7 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
 
     $routes->get('status_tes', 'StatusTes::index');
     $routes->get('status_tes/token', 'StatusTes::token');
+    $routes->get('token', 'StatusTes::tokenView');
     $routes->post('status_tes/kategori', 'StatusTes::kategori');
     $routes->post('status_tes/release', 'StatusTes::release');
     $routes->post('status_tes/token_setting', 'StatusTes::tokenSetting');

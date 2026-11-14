@@ -2,20 +2,27 @@
 
 <?= $this->section('content') ?>
 <?php
-$cards = [
+// [kunci statistik, label, warna, ikon, tautan]
+$cards = $isAdmin ? [
     ['ruang', 'Total Ruang', 'teal', 'door-open', 'daftar_ruang'],
     ['users', 'Total User', 'yellow', 'people', 'daftar_peserta/moodle'],
     ['aktif', 'User Aktif', 'indigo', 'person-check', 'reset_login'],
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
+    ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
+] : [
+    ['ruang', 'Total Ruang', 'teal', 'door-open', null],
+    ['users', 'Total Siswa', 'yellow', 'people', null],
+    ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
+    ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ];
-$bars = [
+$bars = $isAdmin ? [
     ['cpu', 'CPU', $stats['sys']['cpu']['cores'] . ' core · ' . $stats['sys']['cpu']['model']],
     ['mem', 'Memory', $stats['sys']['mem']['text']],
     ['disk', 'Disk', $stats['sys']['disk']['text']],
-];
+] : [];
 ?>
 
-<?php if ($namaKegiatan === ''): ?>
+<?php if ($isAdmin && $namaKegiatan === ''): ?>
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         Nama Kegiatan belum diatur (<a class="alert-link" href="<?= site_url('tools') ?>">Tools → Nama Kegiatan</a>).
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
@@ -26,19 +33,22 @@ $bars = [
     Database Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.
 </div>
 
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4 row-cols-2 <?= count($cards) > 4 ? 'row-cols-md-3 row-cols-xl-5' : 'row-cols-xl-4' ?>">
     <?php foreach ($cards as [$key, $label, $color, $icon, $link]): ?>
-        <div class="col-6 col-xl-3">
+        <div class="col">
             <div class="stat-card stat-<?= $color ?>">
                 <div class="stat-ribbon"><i class="bi bi-<?= $icon ?>"></i></div>
                 <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : number_format($stats[$key], 0, ',', '.') ?></div>
                 <div class="stat-label"><?= esc($label) ?></div>
-                <a class="stat-link" href="<?= site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
+                <?php if ($link !== null): ?>
+                    <a class="stat-link" href="<?= site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
+                <?php endif ?>
             </div>
         </div>
     <?php endforeach ?>
 </div>
 
+<?php if ($isAdmin): ?>
 <div class="card">
     <div class="card-header d-flex align-items-center">
         <span class="fw-semibold">System Information</span>
@@ -71,6 +81,7 @@ $bars = [
         </div>
     </div>
 </div>
+<?php endif ?>
 <?= $this->endSection() ?>
 
 <?= $this->section('scripts') ?>

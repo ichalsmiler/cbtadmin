@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\ActiveTest;
 use App\Libraries\Moodle;
 use App\Libraries\Settings;
 use App\Libraries\SysInfo;
@@ -12,6 +13,7 @@ class Dashboard extends PanelController
     {
         return $this->render('dashboard/index', [
             'title'        => 'Dashboard',
+            'isAdmin'      => $this->isAdmin(),
             'stats'        => $this->collect(),
             'namaKegiatan' => Settings::get('nama_kegiatan'),
             'npsn'         => Settings::get('npsn', (string) env('cbt.npsn', '')),
@@ -26,9 +28,14 @@ class Dashboard extends PanelController
         return $this->response->setJSON($this->collect());
     }
 
+    private function isAdmin(): bool
+    {
+        return session()->get('admin_role') === 'admin';
+    }
+
     private function collect(): array
     {
-        $data = ['ruang' => null, 'users' => null, 'aktif' => null, 'belum' => null, 'moodleError' => false];
+        $data = ['ruang' => null, 'users' => null, 'aktif' => null, 'belum' => null, 'sudah' => null, 'moodleError' => false];
 
         try {
             $data['ruang'] = db_connect()->table('ruang')->countAllResults();
@@ -37,15 +44,19 @@ class Dashboard extends PanelController
         }
 
         try {
+            // Hitungan submit mengikuti tes aktif (Status Test); tanpa tes aktif, semua quiz.
+            $catId         = ActiveTest::categoryId() ?: null;
             $minutes       = max(1, (int) Settings::get('active_minutes', '5'));
             $data['users'] = Moodle::totalUsers();
             $data['aktif'] = Moodle::activeUsers($minutes);
-            $data['belum'] = Moodle::unsubmittedAttempts();
+            $data['belum'] = Moodle::unsubmittedAttempts($catId);
+            $data['sudah'] = Moodle::finishedAttempts($catId);
         } catch (\Throwable $e) {
             $data['moodleError'] = true;
             log_message('error', 'Dashboard Moodle: ' . $e->getMessage());
         }
 
-        return $data + ['sys' => SysInfo::get()];
+        // Informasi server hanya untuk administrator.
+        return $this->isAdmin() ? $data + ['sys' => SysInfo::get()] : $data;
     }
 }

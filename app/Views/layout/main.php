@@ -4,6 +4,7 @@ $menu = [
     ['Dashboard', 'house', ''],
     ['Daftar Peserta', 'person', null, [['Data CBTAdmin', 'daftar_peserta/cbtadmin'], ['Data Moodle', 'daftar_peserta/moodle']]],
     ['Status Test', 'check-square', 'status_tes'],
+    ['Token', 'key', 'token'],
     ['Status Peserta', 'people', 'status_peserta'],
     ['Reset Login Peserta', 'person-x', 'reset_login'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
@@ -40,7 +41,13 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
 <nav class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar">
     <ul class="nav flex-column">
         <?php foreach ($menu as $i => $item): ?>
-            <?php if ($item[0] === 'Tools' && $adminRole !== 'admin') { continue; } ?>
+            <?php
+            // Administrator: semua menu kecuali Token (sudah ada di Status Test).
+            // Pengawas: hanya menu yang boleh dibukanya.
+            if ($adminRole === 'admin' ? $item[2] === 'token' : ($item[2] === null || ! \App\Filters\Guard::allowed($adminRole, $item[2]))) {
+                continue;
+            }
+            ?>
             <?php if (isset($item[3])): ?>
                 <?php $open = (bool) array_filter($item[3], static fn ($sub) => $isActive($sub[1])); ?>
                 <li class="nav-item">

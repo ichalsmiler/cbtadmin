@@ -62,6 +62,30 @@ class StatusTes extends PanelController
         ]);
     }
 
+    /** Halaman Token untuk pengawas: hanya melihat token yang berlaku. */
+    public function tokenView(): string
+    {
+        $name = '';
+        try {
+            foreach (Moodle::categories() as $c) {
+                if ((int) $c['id'] === ActiveTest::categoryId()) {
+                    $name = $c['name'];
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'Token: ' . $e->getMessage());
+        }
+
+        return $this->render('status/token', [
+            'title'        => 'Token',
+            'testName'     => $name,
+            'tokenEnabled' => ActiveTest::tokenEnabled(),
+            'tokenMinutes' => ActiveTest::tokenMinutes(),
+            'token'        => ActiveTest::token(),
+            'nextRelease'  => ActiveTest::nextReleaseAt(),
+        ]);
+    }
+
     /** Token yang berlaku, untuk diperbarui halaman tanpa muat ulang. */
     public function token()
     {

@@ -140,11 +140,31 @@ class Moodle
             ->countAllResults();
     }
 
-    public static function unsubmittedAttempts(): int
+    /** Attempt yang masih dikerjakan (belum submit); dengan $categoryId hanya quiz di kategori itu. */
+    public static function unsubmittedAttempts(?int $categoryId = null): int
     {
-        return self::db()->table(self::t('quiz_attempts'))
-            ->where('state', 'inprogress')
-            ->where('preview', 0)
-            ->countAllResults();
+        return self::countAttempts(['inprogress', 'overdue'], $categoryId);
+    }
+
+    /** Attempt yang sudah submit; dengan $categoryId hanya quiz di kategori itu. */
+    public static function finishedAttempts(?int $categoryId = null): int
+    {
+        return self::countAttempts(['finished'], $categoryId);
+    }
+
+    private static function countAttempts(array $states, ?int $categoryId): int
+    {
+        $builder = self::db()->table(self::t('quiz_attempts'))
+            ->whereIn('state', $states)
+            ->where('preview', 0);
+        if ($categoryId !== null) {
+            $ids = array_map('intval', array_column(self::quizzes($categoryId), 'id'));
+            if ($ids === []) {
+                return 0;
+            }
+            $builder->whereIn('quiz', $ids);
+        }
+
+        return $builder->countAllResults();
     }
 }
