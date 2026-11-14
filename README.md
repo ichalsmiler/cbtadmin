@@ -33,11 +33,39 @@ dan `vendor/` diunduh di server oleh `deploy/install.sh`.
 
 ## Server baru dari nol
 
+Untuk Debian 12/13 (VPS atau container Proxmox). Ganti `IP_SERVER` dan `alamat` sesuai server.
+
+**1. Akses dari komputer ini** — di server sebagai root (konsol, atau `ssh user@IP_SERVER` lalu `su -`),
+buat user `smiler` dengan kunci SSH komputer ini dan sudo tanpa kata sandi:
+
 ```bash
-# di server baru (root):  WWWROOT=https://alamat.sekolah.sch.id bash install-moodle.sh
-bash deploy/setelan-moodle.sh <host-ssh>   # dari komputer ini: setelan ujian CBT di Moodle
-bash deploy/deploy.sh <host-ssh>           # CBT Admin
+apt-get update && apt-get install -y sudo
+id smiler || adduser --gecos "" smiler
+mkdir -p /home/smiler/.ssh && echo 'ISI ~/.ssh/id_ed25519_moodle.pub KOMPUTER INI' >> /home/smiler/.ssh/authorized_keys
+chown -R smiler:smiler /home/smiler/.ssh && chmod 700 /home/smiler/.ssh && chmod 600 /home/smiler/.ssh/authorized_keys
+echo 'smiler ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-smiler && chmod 440 /etc/sudoers.d/90-smiler
 ```
+
+Lalu tambahkan alias di `~/.ssh/config` komputer ini (contoh `Host vps`, `HostName IP_SERVER`,
+`User smiler`, `IdentityFile ~/.ssh/id_ed25519_moodle`).
+
+**2. Moodle** (zona waktu bawaan WITA; `ZONA_WAKTU=Asia/Jakarta` untuk WIB):
+
+```bash
+scp deploy/install-moodle.sh vps:~/
+ssh vps 'sudo WWWROOT=https://alamat.sekolah.sch.id bash ~/install-moodle.sh'
+```
+
+**3. Setelan ujian di Moodle, lalu CBT Admin** (dari komputer ini, Git Bash):
+
+```bash
+bash deploy/setelan-moodle.sh vps
+bash deploy/deploy.sh vps
+```
+
+**4. Data** — di CBT Admin: Tools (nama sekolah, NPSN, nama kegiatan, logo), impor peserta,
+lalu Daftar Ruang → Cetak ID Login. Untuk server cadangan, lanjut ke bagian
+*Server utama + cadangan* di bawah.
 
 ## Setelan Moodle (`deploy/setelan-moodle.sh`)
 

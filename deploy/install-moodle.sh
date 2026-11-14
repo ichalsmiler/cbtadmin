@@ -14,6 +14,7 @@ SITE_FULLNAME="${SITE_FULLNAME:-Ujian Online}"
 SITE_SHORTNAME="${SITE_SHORTNAME:-Ujian}"
 ADMIN_USER="${ADMIN_USER:-admin}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
+ZONA_WAKTU="${ZONA_WAKTU:-Asia/Makassar}"     # WITA; Asia/Jakarta = WIB, Asia/Jayapura = WIT
 
 MOODLE_DIR="/var/www/moodle"
 DATA_DIR="/var/moodledata"
@@ -37,6 +38,20 @@ APT_OPTS=(-y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confo
 log "1/9 Update dan upgrade sistem"
 apt-get update
 apt-get "${APT_OPTS[@]}" full-upgrade
+
+# Zona waktu dan jam server: waktu quiz dan jadwal backup bergantung pada jam yang benar.
+[ -f "/usr/share/zoneinfo/$ZONA_WAKTU" ] || die "Zona waktu $ZONA_WAKTU tidak dikenal."
+ln -sf "/usr/share/zoneinfo/$ZONA_WAKTU" /etc/localtime
+echo "$ZONA_WAKTU" > /etc/timezone
+if systemd-detect-virt --container --quiet 2>/dev/null; then
+    log "Container: jam mengikuti host (pastikan jam host tersinkron)"
+else
+    apt-get "${APT_OPTS[@]}" install systemd-timesyncd
+    systemctl enable --now systemd-timesyncd >/dev/null 2>&1 || true
+    timedatectl set-ntp true 2>/dev/null || true
+fi
+systemctl restart cron 2>/dev/null || true
+log "Zona waktu: $ZONA_WAKTU, jam server: $(date '+%d-%m-%Y %H:%M:%S %Z')"
 
 # ----------------------------- 2. PAKET --------------------------------------
 log "2/9 Memasang Nginx, PHP, MariaDB, Redis"
@@ -79,6 +94,7 @@ log "4/9 Menyetel PHP"
 for sapi in fpm cli; do
 cat > "/etc/php/$PHPV/$sapi/conf.d/99-moodle.ini" <<EOF
 max_input_vars = 5000
+date.timezone = $ZONA_WAKTU
 memory_limit = 256M
 upload_max_filesize = 100M
 post_max_size = 100M

@@ -56,8 +56,10 @@ if ($sm->translation_exists('id', false)) {
 }
 $setel('langmenu', 0);          // siswa tidak bisa mengganti bahasa
 $setel('country', 'ID');
-$setel('timezone', 'Asia/Makassar');
-$setel('forcetimezone', 'Asia/Makassar');
+// Zona waktu Moodle = zona waktu server (diatur install-moodle.sh, bawaan Asia/Makassar).
+$zona = trim((string) @file_get_contents('/etc/timezone')) ?: date_default_timezone_get();
+$setel('timezone', $zona);
+$setel('forcetimezone', $zona);
 
 // Teks kustom: Daftar Ujian, sapaan nama - kelas, pesan sesi berakhir.
 foreach (['id_local', 'en_local'] as $lokal) {
