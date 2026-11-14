@@ -66,6 +66,75 @@ class StatusPeserta extends PanelController
         ]);
     }
 
+    /**
+     * Login ganda: akun peserta yang pada tanggal itu login dari lebih dari satu alamat IP (komputer),
+     * dibaca dari log login Moodle. Pengawas hanya melihat siswa di ruangnya.
+     */
+    public function loginGanda(): string
+    {
+        $tanggal = (string) $this->request->getGet('tanggal');
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal) || ! strtotime($tanggal)) {
+            $tanggal = date('Y-m-d');
+        }
+        $ruangId = $this->myRuang() !== null ? (string) $this->myRuang() : (string) $this->request->getGet('ruang');
+        $tingkat = Tingkat::dariRequest();
+        $rows    = [];
+        $error   = false;
+
+        try {
+            $mulai = strtotime($tanggal . ' 00:00:00');
+            $log   = Moodle::db()->query(
+                'SELECT l.userid, l.ip, COUNT(*) AS kali, MIN(l.timecreated) AS pertama, MAX(l.timecreated) AS terakhir, u.username, u.firstname
+                   FROM ' . Moodle::t('logstore_standard_log') . ' l
+                   JOIN ' . Moodle::t('user') . ' u ON u.id = l.userid
+                  WHERE l.eventname = ? AND l.timecreated >= ? AND l.timecreated < ?
+                  GROUP BY l.userid, l.ip, u.username, u.firstname',
+                ['\\core\\event\\user_loggedin', $mulai, $mulai + 86400]
+            )->getResultArray();
+
+            $per = [];
+            foreach ($log as $l) {
+                $per[$l['userid']][] = $l;
+            }
+            $panel = array_column(db_connect()->table('peserta p')
+                ->select('p.username, p.nama, p.kelas, p.ruang_id, r.nama AS ruang_nama')
+                ->join('ruang r', 'r.id = p.ruang_id', 'left')->get()->getResultArray(), null, 'username');
+
+            foreach ($per as $ips) {
+                if (count($ips) < 2) {
+                    continue;
+                }
+                $info = $panel[$ips[0]['username']] ?? null;
+                if ($info === null) {
+                    continue;  // bukan peserta (admin, guru)
+                }
+                if ($ruangId === '0' ? $info['ruang_id'] !== null : ($ruangId !== '' && (string) $info['ruang_id'] !== $ruangId)) {
+                    continue;
+                }
+                if (! Tingkat::cocok($info['kelas'], $tingkat)) {
+                    continue;
+                }
+                usort($ips, static fn ($a, $b) => (int) $a['pertama'] <=> (int) $b['pertama']);
+                $rows[] = $info + ['ips' => $ips, 'jumlah_ip' => count($ips)];
+            }
+            usort($rows, static fn ($a, $b) => [-$a['jumlah_ip'], (string) $a['ruang_nama'], $a['nama']] <=> [-$b['jumlah_ip'], (string) $b['ruang_nama'], $b['nama']]);
+        } catch (\Throwable $e) {
+            $error = true;
+            log_message('error', 'Login ganda: ' . $e->getMessage());
+        }
+
+        return $this->render('status/login_ganda', [
+            'title'     => 'Login Ganda',
+            'rows'      => $rows,
+            'tanggal'   => $tanggal,
+            'ruangId'   => $ruangId,
+            'tingkat'   => $tingkat,
+            'ruangList' => $this->ruangList(),
+            'lockRuang' => $this->myRuang() !== null,
+            'error'     => $error,
+        ]);
+    }
+
     /** Aksi massal untuk pilihan "quizid:userid". */
     public function aksi()
     {

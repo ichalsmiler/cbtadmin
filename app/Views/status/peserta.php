@@ -56,6 +56,11 @@ $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
                     </a>
                 </li>
             <?php endforeach ?>
+            <li class="nav-item ms-auto">
+                <a class="nav-link text-danger" href="<?= site_url('status_peserta/login_ganda') . ($ruangId !== '' && ! $lockRuang ? '?ruang=' . (int) $ruangId : '') ?>">
+                    <i class="bi bi-people me-1"></i>Login ganda
+                </a>
+            </li>
         </ul>
         <?php if (! $quiz && $filter === 'notstarted'): ?>
             <p class="small text-muted mt-2 mb-0">Pilih quiz dulu untuk melihat peserta yang belum mulai.</p>

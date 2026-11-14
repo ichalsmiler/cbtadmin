@@ -32,13 +32,13 @@ Menu → controller:
 | Dashboard | Dashboard | stat via `dashboard/stats` (JSON) |
 | Daftar Peserta | Peserta | impor AIOCBT (`Excel::read`, header baris 9), No. Peserta = username bila kosong |
 | Status Test / Token | StatusTes | kategori Moodle = tes; simpan → hanya mapel dicentang + kategori itu tampil, lainnya disembunyikan; token bersama (`ActiveTest`, cron `cbt:token`) |
-| Status Peserta | StatusPeserta | paksa submit, tambah waktu; tombol "Hapus attempt…" (admin) → HapusAttempt |
+| Status Peserta | StatusPeserta | paksa submit, tambah waktu; tombol "Hapus attempt…" (admin) → HapusAttempt; "Login ganda" `status_peserta/login_ganda` (log user_loggedin per IP per tanggal) |
 | Reset Login | ResetLogin | hanya dipakai saat Lock login aktif |
 | Laporan Kehadiran | Kehadiran | absensi pengawas; tidak hadir → suspend Moodle hari itu (`Absensi`) |
 | Blokir Siswa | BlokirSiswa | `Libraries/Blokir.php`, tabel `blokir`; tidak dibuka oleh absensi |
 | Daftar Ruang | Ruang | kode login pengawas `NPSN-<huruf><no><2 acak>` (`Pengawas::usernameFor`), Tukar Akses, Generate Kode, Cetak ID Login (`pdf/id_login`), nama lab (`ruang.lokasi`) |
 | Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: logo sekolah kiri + logo kanan `logo2` dari Info Sekolah, jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir, berita acara, absensi ruang |
-| Hasil Ujian / No Attempt | HasilUjian / NoAttempt | |
+| Hasil Ujian / No Attempt | HasilUjian / NoAttempt | tab `?tab=cepat` "Selesai terlalu cepat" (pw/pm/pn: % batas waktu, % median, % nilai) |
 | Tools | Tools | accordion: Moodle Tools (Kelola Test `tools/test_manage`, Cron, Purge/Delete cache, Anti Submit) + CBTAdmin Tools (Info Sekolah, Info Kegiatan, Lock/Resume/Anti Newtab, Ganti Password) + Lainnya (akun, panel, backup, log) |
 
 Library penting: `Moodle` (koneksi DB Moodle langsung, baca; `quizzes()`, `categories()`, `coursesInCategory()`,

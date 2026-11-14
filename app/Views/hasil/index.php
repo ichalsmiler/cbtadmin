@@ -61,7 +61,54 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
         <?php endforeach ?>
     </div>
 
-    <div class="card">
+    <ul class="nav nav-tabs mb-0">
+        <li class="nav-item"><a class="nav-link <?= $tab === 'semua' ? 'active' : '' ?>" href="<?= site_url('hasil_ujian') . '?' . $query ?>">Semua peserta</a></li>
+        <li class="nav-item"><a class="nav-link <?= $tab === 'cepat' ? 'active' : '' ?>" href="<?= site_url('hasil_ujian') . '?' . $query . '&tab=cepat' ?>">
+            <i class="bi bi-lightning-charge me-1"></i>Selesai terlalu cepat <span class="badge text-bg-<?= $cepat ? 'danger' : 'light' ?>"><?= count($cepat) ?></span></a></li>
+    </ul>
+
+    <?php if ($tab === 'cepat'): ?>
+    <div class="card border-top-0 rounded-top-0">
+        <div class="card-body">
+            <form class="d-flex flex-wrap gap-2 align-items-end small mb-3" method="get" action="<?= site_url('hasil_ujian') ?>">
+                <?php foreach (['quiz' => $quizId, 'ruang' => $ruangId, 'kelas' => $kelas, 'tingkat' => $tingkat, 'tab' => 'cepat'] as $k => $val): ?>
+                    <input type="hidden" name="<?= $k ?>" value="<?= esc((string) $val, 'attr') ?>">
+                <?php endforeach ?>
+                <span>Ditandai bila durasi kurang dari</span>
+                <input class="form-control form-control-sm" style="width:4.5rem" type="number" min="1" max="100" name="pw" value="<?= (int) $param['pw'] ?>" aria-label="Persen batas waktu"><span>% batas waktu</span>
+                <span>atau kurang dari</span>
+                <input class="form-control form-control-sm" style="width:4.5rem" type="number" min="1" max="100" name="pm" value="<?= (int) $param['pm'] ?>" aria-label="Persen median"><span>% median durasi;</span>
+                <span>curiga <strong>tinggi</strong> bila nilainya ≥</span>
+                <input class="form-control form-control-sm" style="width:4.5rem" type="number" min="0" max="100" name="pn" value="<?= (int) $param['pn'] ?>" aria-label="Persen nilai"><span>% nilai maksimal.</span>
+                <button class="btn btn-outline-primary btn-sm" type="submit">Terapkan</button>
+            </form>
+            <p class="small text-muted">
+                Batas waktu quiz: <?= (int) $quiz['timelimit'] > 0 ? \App\Controllers\HasilUjian::durasi((int) $quiz['timelimit']) : 'tidak ada' ?> ·
+                Median durasi peserta selesai: <?= $median ? \App\Controllers\HasilUjian::durasi((int) $median) : 'belum cukup data (minimal 5 peserta selesai)' ?>.
+                Ini petunjuk untuk diperiksa (bandingkan dengan nilai harian, tanyakan pengawas), bukan bukti kecurangan.
+            </p>
+            <table class="table table-hover align-middle w-100 datatable" data-order-col="0">
+                <thead><tr><th>Tingkat</th><th>Nama</th><th>Kelas</th><th>Ruang</th><th>Mulai</th><th>Selesai</th><th>Durasi</th><th class="text-end">vs median</th><th class="text-end">Nilai</th></tr></thead>
+                <tbody>
+                <?php foreach ($cepat as $r): ?>
+                    <tr>
+                        <td data-order="<?= $r['curiga'] === 'tinggi' ? 0 : 1 ?>"><span class="badge text-bg-<?= $r['curiga'] === 'tinggi' ? 'danger' : 'warning' ?>"><?= $r['curiga'] === 'tinggi' ? 'Tinggi' : 'Sedang' ?></span></td>
+                        <td><?= esc($r['nama']) ?><div class="small text-muted"><?= esc($r['nomor_peserta']) ?></div></td>
+                        <td><?= esc($r['kelas']) ?></td>
+                        <td><?= esc($r['ruang'] ?? '-') ?></td>
+                        <td><?= date('d/m H:i', $r['timestart']) ?></td>
+                        <td><?= date('d/m H:i', $r['timefinish']) ?></td>
+                        <td data-order="<?= (int) $r['durasi'] ?>"><?= \App\Controllers\HasilUjian::durasi((int) $r['durasi']) ?></td>
+                        <td class="text-end"><?= $median ? round($r['durasi'] / $median * 100) . '%' : '–' ?></td>
+                        <td class="text-end fw-semibold" data-order="<?= $r['nilai'] ?? -1 ?>"><?= $num($r['nilai']) ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <?php else: ?>
+    <div class="card border-top-0 rounded-top-0">
         <div class="card-header d-flex flex-wrap gap-2 align-items-center">
             <span class="fw-semibold"><?= esc($quiz['name']) ?></span>
             <span class="small text-muted">Nilai skala 0–<?= $num($stats['skala']) ?></span>
@@ -93,6 +140,7 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
         </div>
     </div>
     <p class="small text-muted mt-2">Nilai diambil dari nilai akhir quiz di Moodle (sesuai metode penilaian quiz). Peserta yang sedang mengerjakan belum punya nilai.</p>
+    <?php endif ?>
 <?php elseif (! $quiz): ?>
     <div class="card"><div class="card-body text-muted">Pilih quiz untuk melihat nilai peserta.</div></div>
 <?php endif ?>
