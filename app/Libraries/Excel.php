@@ -38,11 +38,16 @@ class Excel
     }
 
     /**
-     * Baca lembar pertama menjadi daftar baris berkunci nama kolom (huruf kecil).
+     * Baca lembar pertama menjadi daftar baris berkunci nama kolom
+     * (huruf kecil, selain huruf/angka menjadi "_", mis. "Kel. Sesi" -> "kel_sesi").
+     *
+     * Baris judul kolom adalah baris pertama, atau (bila $markers diisi) baris pertama
+     * dalam 20 baris awal yang memuat salah satu nama kolom itu. Dengan begitu template
+     * yang diawali petunjuk pengisian (mis. template AIOCBT) tetap terbaca.
      *
      * @return list<array<string, string>>
      */
-    public static function read(string $path): array
+    public static function read(string $path, array $markers = []): array
     {
         $raw = IOFactory::load($path)->getActiveSheet()->toArray(null, true, false, false);
         if ($raw === []) {
@@ -56,8 +61,18 @@ class Excel
 
             return trim((string) ($value ?? ''));
         };
+        $key = static fn ($h): string => trim((string) preg_replace('/[^a-z0-9]+/', '_', strtolower($clean($h))), '_');
 
-        $headers = array_map(static fn ($h) => strtolower(str_replace(' ', '_', $clean($h))), array_shift($raw));
+        if ($markers !== []) {
+            foreach (array_slice($raw, 0, 20, true) as $i => $line) {
+                if (array_intersect(array_map($key, $line), $markers) !== []) {
+                    $raw = array_slice($raw, $i);
+                    break;
+                }
+            }
+        }
+
+        $headers = array_map($key, array_shift($raw));
         $rows    = [];
 
         foreach ($raw as $line) {

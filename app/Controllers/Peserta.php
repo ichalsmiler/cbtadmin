@@ -6,6 +6,7 @@ use App\Libraries\ActivityLog;
 use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
+use App\Libraries\Pengawas;
 use App\Libraries\Settings;
 
 class Peserta extends PanelController
@@ -160,12 +161,12 @@ class Peserta extends PanelController
         }
 
         try {
-            $rows = Excel::read($file->getTempName());
+            $rows = array_map(static fn (array $row) => self::normalizeImportRow($row), Excel::read($file->getTempName(), ['nama', 'nama_peserta']));
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Berkas tidak bisa dibaca: ' . $e->getMessage());
         }
-        if ($rows === [] || ! array_key_exists('nama', $rows[0]) || ! array_key_exists('username', $rows[0])) {
-            return redirect()->back()->with('error', 'Berkas harus punya kolom "nama" dan "username" di baris pertama. Pakai templatenya.');
+        if ($rows === [] || ! array_key_exists('nama', $rows[0])) {
+            return redirect()->back()->with('error', 'Kolom "Nama" / "Nama Peserta" tidak ditemukan. Pakai template CBT Admin atau template AIOCBT.');
         }
 
         $db    = db_connect();
@@ -176,10 +177,16 @@ class Peserta extends PanelController
         $now   = date('Y-m-d H:i:s');
         $baru  = $ubah = 0;
         $gagal = [];
+        $taken = [];  // username yang sudah dipakai baris lain di berkas ini
 
         foreach ($rows as $i => $row) {
             $line     = $i + 2;
             $username = strtolower($row['username'] ?? '');
+            if ($username === '' && ($row['nama'] ?? '') !== '') {
+                // Username boleh kosong (seperti template AIOCBT): pakai milik peserta yang sama, atau buat baru.
+                $username = $this->autoUsername($row['nama'], $row['kelas'] ?? '', $taken);
+            }
+            $taken[$username] = true;
             if (($row['nama'] ?? '') === '' || ! preg_match(self::USERNAME_RE, $username)) {
                 $gagal[] = $line;
 
@@ -220,9 +227,14 @@ class Peserta extends PanelController
                 $baru++;
             }
         }
-        ActivityLog::add('import_peserta', "$baru baru, $ubah diperbarui, " . count($gagal) . ' gagal');
+        // Satu akun pengawas untuk setiap ruang (ruang baru dari import ini ikut dibuatkan).
+        $pengawas = Pengawas::sync();
+        ActivityLog::add('import_peserta', "$baru baru, $ubah diperbarui, " . count($gagal) . " gagal, $pengawas akun pengawas");
 
         $message = "$baru peserta baru, $ubah diperbarui.";
+        if ($pengawas > 0) {
+            $message .= " $pengawas akun pengawas dibuat (lihat menu Pengawas).";
+        }
         if ($gagal !== []) {
             $message .= ' ' . count($gagal) . ' baris dilewati karena nama kosong atau username tidak valid (baris ' . implode(', ', array_slice($gagal, 0, 15)) . (count($gagal) > 15 ? ', …' : '') . ').';
         }
@@ -419,7 +431,55 @@ class Peserta extends PanelController
      * (8 karakter, huruf besar, huruf kecil, angka, simbol) dan tetap mudah diketik.
      * Karakter yang mudah tertukar (0/O, 1/l/I) tidak dipakai.
      */
-    private static function randomPassword(): string
+    /** Samakan nama kolom template AIOCBT dengan kolom CBT Admin. */
+    private static function normalizeImportRow(array $row): array
+    {
+        $alias = [
+            'nama_peserta' => 'nama',
+            'nama_rombel'  => 'kelas',
+            'rombel'       => 'kelas',
+            'kel_sesi'     => 'sesi',
+            'kelompok_sesi' => 'sesi',
+            'no_peserta'   => 'nomor_peserta',
+            'nomor'        => 'nomor_peserta',
+        ];
+        foreach ($alias as $from => $to) {
+            if (isset($row[$from]) && ($row[$to] ?? '') === '') {
+                $row[$to] = $row[$from];
+            }
+        }
+        // Rombel kosong: pakai kolom "Kelas / Jurusan".
+        if (($row['kelas'] ?? '') === '' && ($row['kelas_jurusan'] ?? '') !== '') {
+            $row['kelas'] = $row['kelas_jurusan'];
+        }
+
+        return $row;
+    }
+
+    /**
+     * Username untuk baris tanpa username: milik peserta dengan nama dan kelas yang sama
+     * (supaya import ulang tidak membuat peserta ganda), atau "peserta0001" dst.
+     * Dua siswa bernama sama di berkas yang sama tetap mendapat username berbeda.
+     */
+    private function autoUsername(string $nama, string $kelas, array $taken): string
+    {
+        $db = db_connect();
+        foreach ($db->table('peserta')->select('username')->where('nama', $nama)->where('kelas', $kelas)->get()->getResultArray() as $old) {
+            if (! isset($taken[$old['username']])) {
+                return $old['username'];
+            }
+        }
+        $max = 0;
+        foreach ($db->table('peserta')->select('username')->like('username', 'peserta', 'after')->get()->getResultArray() as $r) {
+            if (preg_match('/^peserta(\d+)$/', $r['username'], $m)) {
+                $max = max($max, (int) $m[1]);
+            }
+        }
+
+        return sprintf('peserta%04d', $max + 1);
+    }
+
+    public static function randomPassword(): string
     {
         $pick = static function (string $chars, int $n): string {
             $out = '';

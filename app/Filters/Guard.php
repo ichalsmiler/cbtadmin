@@ -36,14 +36,19 @@ class Guard implements FilterInterface
         }
 
         // Akun bisa dihapus, dinonaktifkan, atau diganti rolenya saat sesinya masih berjalan.
-        $admin = db_connect()->table('admins')->select('role, aktif, nama')
+        $admin = db_connect()->table('admins')->select('role, aktif, nama, ruang_id')
             ->where('id', (int) $session->get('admin_id'))->get()->getRowArray();
         if (! $admin || ! (int) $admin['aktif']) {
             $session->destroy();
 
             return $this->deny($request, 'Akun Anda sudah tidak aktif.');
         }
-        $session->set(['admin_role' => $admin['role'], 'admin_nama' => $admin['nama']]);
+        $session->set([
+            'admin_role'  => $admin['role'],
+            'admin_nama'  => $admin['nama'],
+            // Pengawas ruang hanya melihat siswa di ruangnya.
+            'admin_ruang' => $admin['role'] === 'proktor' && $admin['ruang_id'] !== null ? (int) $admin['ruang_id'] : null,
+        ]);
 
         $timeout = (int) env('cbt.sessionTimeout', 3600);
         if (time() - (int) $session->get('last_seen') > $timeout) {

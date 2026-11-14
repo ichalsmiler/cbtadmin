@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\ActivityLog;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
+use App\Libraries\Pengawas;
 use App\Libraries\QuizStatus;
 use App\Libraries\Settings;
 
@@ -19,7 +20,7 @@ class StatusPeserta extends PanelController
         }
 
         $quizId  = (int) $this->request->getGet('quiz');
-        $ruangId = (string) $this->request->getGet('ruang');
+        $ruangId = $this->myRuang() !== null ? (string) $this->myRuang() : (string) $this->request->getGet('ruang');
         $rows    = [];
         $quizzes = [];
         $quiz    = null;
@@ -54,7 +55,8 @@ class StatusPeserta extends PanelController
             'filter'    => $filter,
             'quiz'      => $quiz,
             'quizzes'   => $quizzes,
-            'ruangList' => db_connect()->table('ruang')->orderBy('nama')->get()->getResultArray(),
+            'ruangList' => $this->ruangList(),
+            'lockRuang' => $this->myRuang() !== null,
             'ruangId'   => $ruangId,
             'error'     => $error,
             'refresh'   => max(5, (int) Settings::get('refresh_interval', '30')),
@@ -69,6 +71,16 @@ class StatusPeserta extends PanelController
         foreach ((array) $this->request->getPost('ids') as $value) {
             if (preg_match('/^(\d+):(\d+)$/', (string) $value, $m)) {
                 $pairs[(int) $m[1]][] = (int) $m[2];
+            }
+        }
+        // Pengawas ruang hanya boleh menindak siswa di ruangnya.
+        if ($this->myRuang() !== null) {
+            $allowed = Pengawas::moodleIdsInRuang($this->myRuang());
+            foreach ($pairs as $quizId => $userIds) {
+                $pairs[$quizId] = array_values(array_intersect($userIds, $allowed));
+                if ($pairs[$quizId] === []) {
+                    unset($pairs[$quizId]);
+                }
             }
         }
         if ($pairs === []) {

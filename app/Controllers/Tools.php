@@ -115,6 +115,8 @@ class Tools extends PanelController
         $data = ['username' => $username, 'nama' => mb_substr($nama, 0, 120), 'role' => $role, 'aktif' => $aktif];
         if ($password !== '') {
             $data['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
+            // Password yang diketik admin tidak ditampilkan lagi di menu Pengawas.
+            $data['password_plain'] = null;
         }
 
         if ($id > 0) {

@@ -179,7 +179,9 @@
             var apply = function (data) {
                 ['ruang', 'users', 'aktif', 'belum', 'sudah'].forEach(function (key) {
                     var el = document.querySelector('[data-stat="' + key + '"]');
-                    if (el) { el.textContent = data[key] === null || data[key] === undefined ? '–' : format.format(data[key]); }
+                    if (!el) { return; }
+                    var v = data[key];
+                    el.textContent = v === null || v === undefined ? '–' : (typeof v === 'number' ? format.format(v) : v);
                 });
                 document.getElementById('moodleError').classList.toggle('d-none', !data.moodleError);
                 if (!data.sys) { return; } // pengawas: tanpa informasi server

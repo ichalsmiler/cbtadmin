@@ -6,7 +6,7 @@ use App\Libraries\Settings;
 
 abstract class PanelController extends BaseController
 {
-    public const VERSION = '1.2.0';
+    public const VERSION = '1.3.0';
 
     protected $helpers = ['url', 'form'];
 
@@ -22,5 +22,24 @@ abstract class PanelController extends BaseController
             'adminRole'   => (string) $session->get('admin_role'),
             'version'     => self::VERSION,
         ]);
+    }
+
+    /** Ruang yang diawasi akun yang sedang login; null untuk administrator atau proktor tanpa ruang. */
+    protected function myRuang(): ?int
+    {
+        $ruang = session()->get('admin_ruang');
+
+        return $ruang === null ? null : (int) $ruang;
+    }
+
+    /** Daftar ruang untuk pilihan filter: hanya ruangnya sendiri bagi pengawas ruang. */
+    protected function ruangList(): array
+    {
+        $builder = db_connect()->table('ruang')->orderBy('LENGTH(nama)', '', false)->orderBy('nama');
+        if ($this->myRuang() !== null) {
+            $builder->where('id', $this->myRuang());
+        }
+
+        return $builder->get()->getResultArray();
     }
 }

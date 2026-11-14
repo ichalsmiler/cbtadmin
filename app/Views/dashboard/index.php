@@ -10,8 +10,8 @@ $cards = $isAdmin ? [
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ] : [
-    ['ruang', 'Total Ruang', 'teal', 'door-open', null],
-    ['users', 'Total Siswa', 'yellow', 'people', null],
+    ['ruang', $myRuang !== null ? 'Ruang' : 'Total Ruang', 'teal', 'door-open', null],
+    ['users', $myRuang !== null ? 'Siswa di Ruang' : 'Total Siswa', 'yellow', 'people', null],
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ];
@@ -38,7 +38,7 @@ $bars = $isAdmin ? [
         <div class="col">
             <div class="stat-card stat-<?= $color ?>">
                 <div class="stat-ribbon"><i class="bi bi-<?= $icon ?>"></i></div>
-                <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : number_format($stats[$key], 0, ',', '.') ?></div>
+                <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : (is_int($stats[$key]) ? number_format($stats[$key], 0, ',', '.') : esc($stats[$key])) ?></div>
                 <div class="stat-label"><?= esc($label) ?></div>
                 <?php if ($link !== null): ?>
                     <a class="stat-link" href="<?= site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>

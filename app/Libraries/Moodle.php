@@ -140,23 +140,32 @@ class Moodle
             ->countAllResults();
     }
 
-    /** Attempt yang masih dikerjakan (belum submit); dengan $categoryId hanya quiz di kategori itu. */
-    public static function unsubmittedAttempts(?int $categoryId = null): int
+    /**
+     * Attempt yang masih dikerjakan (belum submit).
+     * $categoryId: hanya quiz di kategori itu; $userIds: hanya user itu (mis. siswa satu ruang).
+     */
+    public static function unsubmittedAttempts(?int $categoryId = null, ?array $userIds = null): int
     {
-        return self::countAttempts(['inprogress', 'overdue'], $categoryId);
+        return self::countAttempts(['inprogress', 'overdue'], $categoryId, $userIds);
     }
 
-    /** Attempt yang sudah submit; dengan $categoryId hanya quiz di kategori itu. */
-    public static function finishedAttempts(?int $categoryId = null): int
+    /** Attempt yang sudah submit; parameter sama dengan unsubmittedAttempts(). */
+    public static function finishedAttempts(?int $categoryId = null, ?array $userIds = null): int
     {
-        return self::countAttempts(['finished'], $categoryId);
+        return self::countAttempts(['finished'], $categoryId, $userIds);
     }
 
-    private static function countAttempts(array $states, ?int $categoryId): int
+    private static function countAttempts(array $states, ?int $categoryId, ?array $userIds): int
     {
+        if ($userIds === []) {
+            return 0;
+        }
         $builder = self::db()->table(self::t('quiz_attempts'))
             ->whereIn('state', $states)
             ->where('preview', 0);
+        if ($userIds !== null) {
+            $builder->whereIn('userid', $userIds);
+        }
         if ($categoryId !== null) {
             $ids = array_map('intval', array_column(self::quizzes($categoryId), 'id'));
             if ($ids === []) {

@@ -9,6 +9,7 @@ $menu = [
     ['Reset Login Peserta', 'person-x', 'reset_login'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
     ['Daftar Ruang', 'door-open', 'daftar_ruang'],
+    ['Pengawas', 'person-badge', 'pengawas'],
     ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
     ['Hasil Ujian', 'award', 'hasil_ujian'],
     ['Tools', 'gear', 'tools'],

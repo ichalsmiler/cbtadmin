@@ -22,6 +22,12 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('tools/backup', 'Tools::backup');
     $routes->post('tools/bersihkan_sesi', 'Tools::bersihkanSesi');
 
+    $routes->get('pengawas', 'PengawasController::index');
+    $routes->post('pengawas/generate', 'PengawasController::generate');
+    $routes->post('pengawas/reset', 'PengawasController::reset');
+    $routes->post('pengawas/hapus/(:num)', 'PengawasController::hapus/$1');
+    $routes->get('pengawas/export', 'PengawasController::export');
+
     $routes->get('daftar_ruang', 'Ruang::index');
     $routes->post('daftar_ruang/simpan', 'Ruang::save');
     $routes->post('daftar_ruang/hapus/(:num)', 'Ruang::delete/$1');

@@ -15,16 +15,18 @@
             </div>
             <div>
                 <label class="form-label small mb-1" for="fRuang">Ruang</label>
-                <select class="form-select form-select-sm" id="fRuang" name="ruang">
-                    <option value="">Semua ruang</option>
-                    <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
+                <select class="form-select form-select-sm" id="fRuang" name="ruang" <?= $lockRuang ? 'disabled' : '' ?>>
+                    <?php if (! $lockRuang): ?>
+                        <option value="">Semua ruang</option>
+                        <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
+                    <?php endif ?>
                     <?php foreach ($ruangList as $r): ?>
                         <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
             <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
-            <?php if ($cari !== '' || $ruangId !== ''): ?>
+            <?php if ($cari !== '' || ($ruangId !== '' && ! $lockRuang)): ?>
                 <a class="btn btn-link btn-sm" href="<?= site_url('reset_login') ?>">Hapus filter</a>
             <?php endif ?>
         </form>

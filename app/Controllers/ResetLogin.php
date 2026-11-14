@@ -5,13 +5,14 @@ namespace App\Controllers;
 use App\Libraries\ActivityLog;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
+use App\Libraries\Pengawas;
 
 class ResetLogin extends PanelController
 {
     public function index(): string
     {
         $cari    = trim((string) $this->request->getGet('cari'));
-        $ruangId = (string) $this->request->getGet('ruang');
+        $ruangId = $this->myRuang() !== null ? (string) $this->myRuang() : (string) $this->request->getGet('ruang');
         $rows    = [];
         $error   = false;
 
@@ -60,7 +61,8 @@ class ResetLogin extends PanelController
             'rows'      => $rows,
             'cari'      => $cari,
             'ruangId'   => $ruangId,
-            'ruangList' => db_connect()->table('ruang')->orderBy('nama')->get()->getResultArray(),
+            'ruangList' => $this->ruangList(),
+            'lockRuang' => $this->myRuang() !== null,
             'error'     => $error,
         ]);
     }
@@ -71,6 +73,14 @@ class ResetLogin extends PanelController
         $label = count($ids) . ' peserta terpilih';
 
         $ruangId = (int) $this->request->getPost('ruang_id');
+        if ($this->myRuang() !== null) {
+            // Pengawas ruang hanya boleh mereset siswa di ruangnya.
+            if ($ruangId > 0) {
+                $ruangId = $this->myRuang();
+            } else {
+                $ids = array_values(array_intersect($ids, Pengawas::moodleIdsInRuang($this->myRuang())));
+            }
+        }
         if ($ruangId > 0) {
             $ruang     = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
             $usernames = array_column(db_connect()->table('peserta')->select('username')->where('ruang_id', $ruangId)->get()->getResultArray(), 'username');

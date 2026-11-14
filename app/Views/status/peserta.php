@@ -34,9 +34,11 @@ $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
             </div>
             <div>
                 <label class="form-label small mb-1" for="fRuang">Ruang</label>
-                <select class="form-select form-select-sm" id="fRuang" name="ruang" onchange="this.form.submit()">
-                    <option value="">Semua ruang</option>
-                    <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
+                <select class="form-select form-select-sm" id="fRuang" name="ruang" onchange="this.form.submit()" <?= $lockRuang ? 'disabled' : '' ?>>
+                    <?php if (! $lockRuang): ?>
+                        <option value="">Semua ruang</option>
+                        <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
+                    <?php endif ?>
                     <?php foreach ($ruangList as $r): ?>
                         <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
