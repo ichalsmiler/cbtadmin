@@ -15,7 +15,7 @@ class NoAttempt extends PanelController
 
         return $this->render('noattempt/index', $data + [
             'title'     => 'No Attempt Check',
-            'ruangList' => db_connect()->table('ruang')->orderBy('nama')->get()->getResultArray(),
+            'ruangList' => $this->ruangList(),
             'kelasList' => array_column(db_connect()->table('peserta')->distinct()->select('kelas')->where('kelas !=', '')->orderBy('kelas')->get()->getResultArray(), 'kelas'),
         ]);
     }
@@ -55,7 +55,7 @@ class NoAttempt extends PanelController
                 $all               = QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, $kelas);
                 $data['terdaftar'] = count($all);
                 $data['rows']      = array_values(array_filter($all, static fn ($r) => $r['status'] === 'notstarted'));
-                usort($data['rows'], static fn ($a, $b) => [$a['ruang'], $a['kelas'], $a['nama']] <=> [$b['ruang'], $b['kelas'], $b['nama']]);
+                usort($data['rows'], static fn ($a, $b) => strnatcasecmp((string) $a['ruang'], (string) $b['ruang']) ?: [$a['kelas'], $a['nama']] <=> [$b['kelas'], $b['nama']]);
             }
         } catch (\Throwable $e) {
             $data['error'] = true;

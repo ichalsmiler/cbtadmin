@@ -14,7 +14,7 @@ class HasilUjian extends PanelController
     {
         return $this->render('hasil/index', $this->collect() + [
             'title'     => 'Hasil Ujian',
-            'ruangList' => db_connect()->table('ruang')->orderBy('nama')->get()->getResultArray(),
+            'ruangList' => $this->ruangList(),
             'kelasList' => array_column(db_connect()->table('peserta')->distinct()->select('kelas')->where('kelas !=', '')->orderBy('kelas')->get()->getResultArray(), 'kelas'),
         ]);
     }

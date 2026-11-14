@@ -13,7 +13,7 @@ class Ruang extends PanelController
         $ruang = $db->table('ruang r')
             ->select('r.*, s.nama AS sesi_nama, (SELECT COUNT(*) FROM peserta p WHERE p.ruang_id = r.id) AS jumlah_peserta', false)
             ->join('sesi s', 's.id = r.sesi_id', 'left')
-            ->orderBy('r.nama')
+            ->orderBy('LENGTH(r.nama)', '', false)->orderBy('r.nama')
             ->get()->getResultArray();
 
         return $this->render('ruang/index', [

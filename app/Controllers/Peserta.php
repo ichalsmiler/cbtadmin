@@ -26,7 +26,7 @@ class Peserta extends PanelController
             'title'       => 'Daftar Peserta · Data CBTAdmin',
             'rows'        => $this->pesertaRows($kelas, $ruangId),
             'kelasList'   => array_column($db->table('peserta')->distinct()->select('kelas')->where('kelas !=', '')->orderBy('kelas')->get()->getResultArray(), 'kelas'),
-            'ruangList'   => $db->table('ruang')->orderBy('nama')->get()->getResultArray(),
+            'ruangList'   => $this->ruangList(),
             'sesiList'    => $db->table('sesi')->orderBy('nama')->get()->getResultArray(),
             'filterKelas' => $kelas,
             'filterRuang' => $ruangId,

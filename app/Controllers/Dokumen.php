@@ -106,7 +106,7 @@ class Dokumen extends PanelController
         if ($perKelas) {
             $builder->orderBy('p.kelas')->orderBy('p.nama');
         } else {
-            $builder->orderBy('r.nama')->orderBy('s.nama')->orderBy('p.nomor_peserta')->orderBy('p.nama');
+            $builder->orderBy('LENGTH(r.nama)', '', false)->orderBy('r.nama')->orderBy('s.nama')->orderBy('p.nomor_peserta')->orderBy('p.nama');
         }
 
         return $builder->get()->getResultArray();

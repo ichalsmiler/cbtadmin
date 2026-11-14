@@ -133,14 +133,22 @@ chmod 640 "$APP_DIR/.env"
 chown -R www-data:www-data "$APP_DIR/writable"
 mkdir -p "$APP_DIR/webroot"
 ln -sfn ../public "$APP_DIR/webroot/cbtadmin"
-(cd "$APP_DIR" && runuser -u www-data -- php spark migrate --all)
+CRON_FILE=/etc/cron.d/cbtadmin
+if [ "$(cat /etc/cbt-ha-peran 2>/dev/null)" = cadangan ]; then
+    # Server cadangan HA: database hanya-baca dan berisi salinan server utama (migrasi ikut tersalin);
+    # cron tetap dimatikan sampai server ini dipindah menjadi utama.
+    CRON_FILE=/etc/cron.d/cbtadmin.cadangan-off
+    rm -f /etc/cron.d/cbtadmin
+else
+    (cd "$APP_DIR" && runuser -u www-data -- php spark migrate --all)
+fi
 
 # Release token otomatis (menu Status Test): cek tiap menit.
-cat > /etc/cron.d/cbtadmin <<EOF
+cat > "$CRON_FILE" <<EOF
 # CBT Admin: release token otomatis dan pasang token di quiz tes aktif.
 * * * * * www-data cd $APP_DIR && flock -n /tmp/cbtadmin-token.lock php spark cbt:token >/dev/null 2>&1
 EOF
-chmod 644 /etc/cron.d/cbtadmin
+chmod 644 "$CRON_FILE"
 
 # ----------------------------- 6. Akun admin awal -----------------------------
 ADMIN_COUNT="$(mariadb -N "$PANEL_DB" -e 'SELECT COUNT(*) FROM admins')"
