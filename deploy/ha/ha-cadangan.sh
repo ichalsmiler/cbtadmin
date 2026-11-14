@@ -53,6 +53,11 @@ load_conf() {
     fi
     local s=http; [ "$PAKAI_HTTPS" = ya ] && s=https
     URL_UTAMA="$s://$DOMAIN_UTAMA"; URL_CADANGAN="$s://$DOMAIN_CADANGAN"
+    # Jaringan lokal: kedua server langsung terhubung lewat IP LAN, tanpa WireGuard.
+    if [ -z "${PAKAI_WIREGUARD:-}" ]; then
+        if [ "$PAKAI_HTTPS" = ya ]; then PAKAI_WIREGUARD=ya; else PAKAI_WIREGUARD=tidak; fi
+    fi
+    if [ "$PAKAI_WIREGUARD" != ya ]; then WG_IP="$CADANGAN_IP"; PEER_WG_IP="$UTAMA_IP"; fi
     mkdir -p "$HA_DIR"; chmod 700 "$HA_DIR"
     if [ "$(readlink -f "$src")" != "$HA_DIR/ha.conf" ]; then install -m 600 "$src" "$HA_DIR/ha.conf"; fi
 }
@@ -264,16 +269,21 @@ pasang() {
     warn "Database moodle dan cbtadmin di server INI akan DIHAPUS lalu diganti salinan dari server utama."
     confirm "YA"
 
-    setup_wireguard "$UTAMA_IP"
+    if [ "$PAKAI_WIREGUARD" = ya ]; then
+        setup_wireguard "$UTAMA_IP"
+    else
+        log "Jaringan lokal: terhubung langsung $WG_IP <-> $PEER_WG_IP (tanpa WireGuard)"
+        apt-get install -y rsync >/dev/null
+    fi
     local i
     for i in $(seq 1 30); do
         if ping -c1 -W1 "$PEER_WG_IP" >/dev/null 2>&1; then break; fi
-        [ "$i" -eq 30 ] && die "Server utama ($PEER_WG_IP) tidak terjangkau lewat WireGuard.
+        [ "$i" -eq 30 ] && die "Server utama ($PEER_WG_IP) tidak terjangkau.
   Pastikan ha-utama.sh pasang sudah dijalankan di $UTAMA_IP, ha.conf kedua server sama,
   dan port UDP $WG_PORT terbuka di firewall penyedia VPS."
         sleep 2
     done
-    echo "Server utama terjangkau lewat WireGuard."
+    echo "Server utama terjangkau."
     setup_web "$URL_CADANGAN"
     set_site_mode cadangan
 
@@ -290,6 +300,7 @@ pasang() {
     fi
 
     log "MariaDB: mode cadangan (hanya-baca, menerima replikasi)"
+    install -d -o mysql -g adm -m 2750 /var/log/mysql   # folder binlog; tidak ada bawaan di Debian 13
     cat > "$DB_CNF" <<EOF
 # Replikasi CBT HA - server CADANGAN (dibuat oleh ha-cadangan.sh)
 [mysqld]
@@ -389,9 +400,13 @@ status() {
     load_conf
     echo "Peran server ini : $(cat "$ROLE_FILE" 2>/dev/null || echo 'belum diatur')"
     echo
-    echo "--- WireGuard"
-    local hs
-    hs="$(wg show "$WG_IF" latest-handshakes 2>/dev/null | awk '{print $2}')"
+    echo "--- Jalur ke server lain"
+    local hs=""
+    if [ "$PAKAI_WIREGUARD" != ya ]; then
+        if ping -c1 -W2 "$PEER_WG_IP" >/dev/null 2>&1; then hs=$(date +%s); fi
+    else
+        hs="$(wg show "$WG_IF" latest-handshakes 2>/dev/null | awk '{print $2}')"
+    fi
     if [ -n "$hs" ] && [ "$hs" -gt 0 ]; then
         echo "Terhubung ke utama, kontak terakhir $(( $(date +%s) - hs )) detik lalu"
     else

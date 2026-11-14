@@ -49,6 +49,11 @@ load_conf() {
     fi
     local s=http; [ "$PAKAI_HTTPS" = ya ] && s=https
     URL_UTAMA="$s://$DOMAIN_UTAMA"; URL_CADANGAN="$s://$DOMAIN_CADANGAN"
+    # Jaringan lokal: kedua server langsung terhubung lewat IP LAN, tanpa WireGuard.
+    if [ -z "${PAKAI_WIREGUARD:-}" ]; then
+        if [ "$PAKAI_HTTPS" = ya ]; then PAKAI_WIREGUARD=ya; else PAKAI_WIREGUARD=tidak; fi
+    fi
+    if [ "$PAKAI_WIREGUARD" != ya ]; then WG_IP="$UTAMA_IP"; PEER_WG_IP="$CADANGAN_IP"; fi
     mkdir -p "$HA_DIR"; chmod 700 "$HA_DIR"
     if [ "$(readlink -f "$src")" != "$HA_DIR/ha.conf" ]; then install -m 600 "$src" "$HA_DIR/ha.conf"; fi
 }
@@ -192,11 +197,17 @@ pasang() {
     echo "Server ini disiapkan sebagai UTAMA: $URL_UTAMA ($UTAMA_IP)."
     echo "Cadangan: $URL_CADANGAN ($CADANGAN_IP)."
 
-    setup_wireguard "$CADANGAN_IP"
+    if [ "$PAKAI_WIREGUARD" = ya ]; then
+        setup_wireguard "$CADANGAN_IP"
+    else
+        log "Jaringan lokal: terhubung langsung $WG_IP <-> $PEER_WG_IP (tanpa WireGuard)"
+        apt-get install -y rsync >/dev/null
+    fi
     setup_web "$URL_UTAMA"
     set_site_mode aktif
 
     log "MariaDB: binlog untuk replikasi ke cadangan"
+    install -d -o mysql -g adm -m 2750 /var/log/mysql   # folder binlog; tidak ada bawaan di Debian 13
     cat > "$DB_CNF" <<EOF
 # Replikasi CBT HA - server UTAMA (dibuat oleh ha-utama.sh)
 [mysqld]
@@ -222,7 +233,7 @@ GRANT SELECT, RELOAD, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER, REPLICATION SLAVE,
 FLUSH PRIVILEGES;
 EOF
 
-    log "rsync: sumber salinan file untuk cadangan (hanya lewat WireGuard)"
+    log "rsync: sumber salinan file untuk cadangan (hanya untuk server cadangan)"
     cat > /etc/rsyncd.conf <<EOF
 # CBT HA - sumber salinan file untuk server cadangan (dibuat oleh ha-utama.sh)
 address = $WG_IP
@@ -266,7 +277,7 @@ EOF
     echo "  SERVER UTAMA SIAP"
     echo "  Alamat ujian : $URL_UTAMA"
     echo "  Berikutnya   : jalankan  bash ha-cadangan.sh pasang  di $CADANGAN_IP"
-    echo "  Pastikan port UDP $WG_PORT terbuka di firewall kedua server."
+    [ "$PAKAI_WIREGUARD" = ya ] && echo "  Pastikan port UDP $WG_PORT terbuka di firewall kedua server."
     echo "============================================================"
 }
 
@@ -275,9 +286,13 @@ status() {
     load_conf
     echo "Peran server ini : $(cat "$ROLE_FILE" 2>/dev/null || echo 'belum diatur')"
     echo
-    echo "--- WireGuard"
-    local hs
-    hs="$(wg show "$WG_IF" latest-handshakes 2>/dev/null | awk '{print $2}')"
+    echo "--- Jalur ke server lain"
+    local hs=""
+    if [ "$PAKAI_WIREGUARD" != ya ]; then
+        if ping -c1 -W2 "$PEER_WG_IP" >/dev/null 2>&1; then hs=$(date +%s); fi
+    else
+        hs="$(wg show "$WG_IF" latest-handshakes 2>/dev/null | awk '{print $2}')"
+    fi
     if [ -n "$hs" ] && [ "$hs" -gt 0 ]; then
         echo "Terhubung ke cadangan, kontak terakhir $(( $(date +%s) - hs )) detik lalu"
     else
