@@ -6,7 +6,6 @@ $menu = [
     ['Status Test', 'check-square', 'status_tes'],
     ['Token', 'key', 'token'],
     ['Status Peserta', 'people', 'status_peserta'],
-    ['Hapus Attempt', 'trash', 'hapus_attempt'],
     ['Laporan Kehadiran', 'clipboard-check', 'kehadiran'],
     ['Blokir Siswa', 'slash-circle', 'blokir_siswa'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
