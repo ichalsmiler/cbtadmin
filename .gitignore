@@ -1,0 +1,7 @@
+# Rahasia dan berkas hasil instalasi di server
+.env
+vendor/
+writable/
+*.sql
+*.xlsx
+*.pdf

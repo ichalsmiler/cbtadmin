@@ -1,0 +1,96 @@
+<?= $this->extend('layout/main') ?>
+
+<?= $this->section('content') ?>
+<?php $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–'; ?>
+<?php if ($error): ?>
+    <div class="alert alert-danger" role="alert">Data login Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.</div>
+<?php endif ?>
+
+<div class="card mb-3">
+    <div class="card-body d-flex flex-wrap gap-3 align-items-end">
+        <form class="d-flex flex-wrap gap-2 align-items-end" method="get" action="<?= site_url('reset_login') ?>">
+            <div>
+                <label class="form-label small mb-1" for="fCari">Cari peserta</label>
+                <input class="form-control form-control-sm" id="fCari" name="cari" value="<?= esc($cari) ?>" placeholder="username atau nama">
+            </div>
+            <div>
+                <label class="form-label small mb-1" for="fRuang">Ruang</label>
+                <select class="form-select form-select-sm" id="fRuang" name="ruang">
+                    <option value="">Semua ruang</option>
+                    <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
+                    <?php foreach ($ruangList as $r): ?>
+                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                    <?php endforeach ?>
+                </select>
+            </div>
+            <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
+            <?php if ($cari !== '' || $ruangId !== ''): ?>
+                <a class="btn btn-link btn-sm" href="<?= site_url('reset_login') ?>">Hapus filter</a>
+            <?php endif ?>
+        </form>
+
+        <form class="d-flex gap-2 align-items-end ms-lg-auto" method="post" action="<?= site_url('reset_login/reset') ?>"
+              data-confirm="Reset login semua peserta di ruang yang dipilih? Mereka harus login ulang.">
+            <?= csrf_field() ?>
+            <div>
+                <label class="form-label small mb-1" for="fRuangReset">Reset satu ruang</label>
+                <select class="form-select form-select-sm" id="fRuangReset" name="ruang_id" required>
+                    <option value="">Pilih ruang</option>
+                    <?php foreach ($ruangList as $r): ?>
+                        <option value="<?= (int) $r['id'] ?>"><?= esc($r['nama']) ?></option>
+                    <?php endforeach ?>
+                </select>
+            </div>
+            <button class="btn btn-outline-danger btn-sm" type="submit"><i class="bi bi-arrow-counterclockwise me-1"></i>Reset ruang</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <form method="post" action="<?= site_url('reset_login/reset') ?>" data-bulk>
+        <?= csrf_field() ?>
+        <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+            <span class="small text-muted">
+                <?= $cari !== '' ? 'Hasil pencarian "' . esc($cari) . '"' : 'Peserta yang sedang login' ?>: <?= count($rows) ?>
+            </span>
+            <button class="btn btn-outline-danger btn-sm ms-auto" type="submit"
+                    data-confirm-button="Reset login peserta yang dicentang? Mereka harus login ulang, lalu bisa melanjutkan ujian di perangkat lain.">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset yang dicentang
+            </button>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover align-middle w-100 datatable" data-order-col="1">
+                <thead>
+                <tr>
+                    <th data-orderable="false" style="width:1%"><input class="form-check-input" type="checkbox" data-check-all aria-label="Centang semua"></th>
+                    <th>Username</th><th>Nama</th><th>Kelas</th><th>Ruang</th><th>IP terakhir</th><th>Login</th><th>Aktif terakhir</th><th class="text-center">Sesi</th>
+                    <th data-orderable="false"></th>
+                </tr>
+                </thead>
+                <tbody>
+                <?php foreach ($rows as $r): ?>
+                    <tr>
+                        <td><input class="form-check-input" type="checkbox" name="ids[]" value="<?= $r['userid'] ?>" aria-label="Pilih <?= esc($r['username'], 'attr') ?>"></td>
+                        <td><code><?= esc($r['username']) ?></code></td>
+                        <td><?= esc($r['nama']) ?></td>
+                        <td><?= esc($r['kelas']) ?></td>
+                        <td><?= esc($r['ruang'] ?? '-') ?></td>
+                        <td><?= esc($r['ip'] !== '' ? $r['ip'] : '–') ?></td>
+                        <td data-order="<?= $r['login'] ?>"><?= $fmt($r['login']) ?></td>
+                        <td data-order="<?= $r['aktif'] ?>"><?= $fmt($r['aktif']) ?></td>
+                        <td class="text-center"><?= $r['sesi'] > 0 ? '<span class="badge text-bg-success">' . $r['sesi'] . '</span>' : '<span class="text-muted">0</span>' ?></td>
+                        <td class="text-end">
+                            <button class="btn btn-outline-danger btn-sm text-nowrap" type="button" <?= $r['sesi'] === 0 ? 'disabled' : '' ?>
+                                    data-post="<?= site_url('reset_login/reset') ?>" data-fields="<?= esc(json_encode(['ids[]' => $r['userid']]), 'attr') ?>"
+                                    data-confirm-text="Reset login <?= esc($r['username'], 'attr') ?>? Peserta harus login ulang.">Reset Login</button>
+                        </td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
+
+<form method="post" id="postForm" class="d-none"><?= csrf_field() ?></form>
+<?= $this->endSection() ?>

@@ -1,0 +1,80 @@
+<?= $this->extend('layout/main') ?>
+
+<?= $this->section('content') ?>
+<?php
+$cards = [
+    ['ruang', 'Total Ruang', 'teal', 'door-open', 'daftar_ruang'],
+    ['users', 'Total User', 'yellow', 'people', 'daftar_peserta/moodle'],
+    ['aktif', 'User Aktif', 'indigo', 'person-check', 'reset_login'],
+    ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
+];
+$bars = [
+    ['cpu', 'CPU', $stats['sys']['cpu']['cores'] . ' core · ' . $stats['sys']['cpu']['model']],
+    ['mem', 'Memory', $stats['sys']['mem']['text']],
+    ['disk', 'Disk', $stats['sys']['disk']['text']],
+];
+?>
+
+<?php if ($namaKegiatan === ''): ?>
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        Nama Kegiatan belum diatur (<a class="alert-link" href="<?= site_url('tools') ?>">Tools → Nama Kegiatan</a>).
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+<?php endif ?>
+
+<div class="alert alert-danger <?= $stats['moodleError'] ? '' : 'd-none' ?>" id="moodleError" role="alert">
+    Database Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.
+</div>
+
+<div class="row g-3 mb-4">
+    <?php foreach ($cards as [$key, $label, $color, $icon, $link]): ?>
+        <div class="col-6 col-xl-3">
+            <div class="stat-card stat-<?= $color ?>">
+                <div class="stat-ribbon"><i class="bi bi-<?= $icon ?>"></i></div>
+                <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : number_format($stats[$key], 0, ',', '.') ?></div>
+                <div class="stat-label"><?= esc($label) ?></div>
+                <a class="stat-link" href="<?= site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
+            </div>
+        </div>
+    <?php endforeach ?>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center">
+        <span class="fw-semibold">System Information</span>
+        <?php if ($webminUrl !== ''): ?>
+            <a class="ms-auto small" href="<?= esc($webminUrl, 'attr') ?>" target="_blank" rel="noopener">Open Webmin <i class="bi bi-box-arrow-up-right"></i></a>
+        <?php endif ?>
+    </div>
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <dl class="row mb-0 sysinfo">
+                    <dt class="col-4">Name</dt><dd class="col-8"><?= esc($namaSekolah !== '' ? $namaSekolah : '-') ?></dd>
+                    <dt class="col-4">ID</dt><dd class="col-8"><?= esc($npsn !== '' ? $npsn : '-') ?></dd>
+                    <dt class="col-4">Address</dt><dd class="col-8"><?= esc($serverIp) ?></dd>
+                </dl>
+            </div>
+            <div class="col-lg-7">
+                <?php foreach ($bars as [$key, $label, $text]): ?>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="fw-semibold"><?= $label ?></span>
+                            <span class="text-muted text-truncate ms-3" data-sys-text="<?= $key ?>"><?= esc($text) ?></span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="<?= $label ?>">
+                            <div class="progress-bar" data-sys-bar="<?= $key ?>" style="width: <?= (int) $stats['sys'][$key]['percent'] ?>%"><?= (int) $stats['sys'][$key]['percent'] ?>%</div>
+                        </div>
+                    </div>
+                <?php endforeach ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+    CbtDashboard.start('<?= site_url('dashboard/stats') ?>', <?= (int) $refresh ?>);
+</script>
+<?= $this->endSection() ?>

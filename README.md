@@ -1,0 +1,93 @@
+# CBT Admin
+
+Panel administrasi ujian CBT untuk Moodle, diakses di `http://<ip-server>/cbtadmin/`.
+Dibangun dengan CodeIgniter 4 dan berjalan di server yang sama dengan Moodle.
+
+## Status
+
+| Menu | Status |
+|---|---|
+| Login, layout, Dashboard | Selesai |
+| Daftar Ruang (ruang dan sesi) | Selesai |
+| Daftar Peserta (Data CBTAdmin, Data Moodle, import/export Excel, buat user Moodle, reset password) | Selesai |
+| Tools (pengaturan, logo, akun admin/proktor, backup database panel, bersihkan sesi, log aktivitas) | Selesai |
+| Status Test (buka/tutup/atur waktu quiz), Status Peserta (paksa submit, tambah waktu, hapus attempt) | Selesai |
+| Reset Login Peserta (per peserta, massal, per ruang), No Attempt Check (export Excel) | Selesai |
+| Hasil Ujian (tabel, statistik, Excel, PDF), Dokumen (kartu peserta 8 per A4, daftar hadir, laporan kehadiran, berita acara PDF, Excel) | Selesai |
+
+## Isi folder ini
+
+Folder ini hanya berisi kode panel (lapisan di atas CodeIgniter 4). Kerangka CodeIgniter
+dan `vendor/` diunduh di server oleh `deploy/install.sh`.
+
+- `app/` — controller, library, view, migrasi, rute.
+- `public/assets/` — CSS dan JS panel. Bootstrap, Bootstrap Icons, dan jQuery diunduh ke
+  `public/assets/vendor/` di server supaya panel jalan tanpa internet.
+- `deploy/install.sh` — pemasang di server (dijalankan sebagai root).
+- `deploy/deploy.sh` — kirim kode dari komputer ini lalu jalankan pemasang.
+
+## Pemasangan
+
+Syarat: server sudah berisi Moodle hasil `install-moodle.sh` (Nginx, PHP-FPM, MariaDB),
+dan komputer ini bisa `ssh moodle` dengan sudo tanpa kata sandi.
+
+```bash
+bash deploy/deploy.sh
+```
+
+Pemasang mengerjakan:
+
+1. Memasang Composer dan mengunduh CodeIgniter 4 ke `/var/www/cbtadmin`.
+2. Menyalin kode panel dan mengunduh aset.
+3. Membuat database `cbtadmin` dan user database `cbtadmin` (akses penuh ke database
+   panel; baca/tulis ke database Moodle), lalu menulis `.env`.
+4. Menjalankan migrasi (`admins`, `peserta`, `ruang`, `sesi`, `settings`, `activity_log`).
+5. Membuat akun `admin` dengan kata sandi acak, disimpan di server di
+   `/root/cbtadmin-credentials.txt`.
+6. Menambahkan `/etc/nginx/snippets/cbtadmin.conf` dan memuatnya dari konfigurasi situs Moodle.
+
+Menjalankan ulang `deploy.sh` hanya memperbarui kode; `.env`, database, dan akun admin
+yang sudah ada tidak diubah.
+
+## Konfigurasi `.env` (di server, `/var/www/cbtadmin/.env`)
+
+| Kunci | Isi |
+|---|---|
+| `app.baseURL` | Alamat panel, diakhiri `/cbtadmin/` |
+| `database.default.*` | Koneksi database panel |
+| `moodle.hostname`, `moodle.database`, `moodle.username`, `moodle.password` | Koneksi database Moodle |
+| `moodle.prefix` | Prefix tabel Moodle (bawaan `mdl_`) |
+| `cbt.namaSekolah`, `cbt.npsn`, `cbt.webminUrl` | Nilai bawaan; bisa ditimpa dari menu Tools |
+| `cbt.sessionTimeout` | Batas diam sebelum admin harus login ulang (detik) |
+
+## Akun admin
+
+Akun `admin` awal dibuat oleh pemasang. Akun lain (administrator atau proktor) dikelola dari
+**Tools → Akun panel**. Proktor bisa memakai semua menu kecuali Tools. Akun yang dinonaktifkan,
+dihapus, atau diganti rolenya langsung berlaku, termasuk untuk sesi yang sedang login.
+
+Bila semua akun administrator terkunci, buat hash password di server:
+
+```bash
+php -r 'echo password_hash("KATA-SANDI", PASSWORD_DEFAULT), "\n";'
+```
+
+lalu masukkan hasilnya ke tabel `admins` (kolom `password_hash`, `role` = `admin`, `aktif` = 1).
+
+## Backup
+
+**Tools → Backup database panel** mengunduh berkas `.sql` berisi semua tabel panel (peserta beserta
+password, ruang, sesi, pengaturan, akun, log). Data Moodle tidak termasuk. Untuk memulihkan:
+
+```bash
+mariadb cbtadmin < cbtadmin_backup_YYYYMMDD_HHMMSS.sql
+```
+
+## Catatan teknis
+
+- "User Aktif" dihitung dari `mdl_user.lastaccess`. Sesi Moodle disimpan di Redis (bukan `mdl_sessions`),
+  jadi Reset Login membaca dan menghapus sesi lewat `resessionmanager` di jembatan.
+- Aksi yang mengubah data ujian Moodle (buat user, reset password, waktu quiz, paksa submit,
+  tambah waktu, hapus attempt) dijalankan lewat fungsi Moodle sendiri (`app/Bridge/moodle_bridge.php`), bukan SQL langsung.
+- Password peserta harus memenuhi kebijakan password Moodle (bawaan: 8 karakter, huruf besar, huruf kecil, angka, simbol). Password acak panel berbentuk `Kmtr-482`. Untuk password yang lebih sederhana, longgarkan kebijakan di Moodle: Site administration → Security → Site security settings.
+- Panel menyimpan password peserta apa adanya di tabel `peserta` supaya bisa dicetak di kartu.
