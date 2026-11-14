@@ -7,14 +7,32 @@
             <div class="card-header fw-semibold">Cetak kartu peserta atau daftar hadir</div>
             <div class="card-body">
                 <form method="get" target="_blank" id="cetakForm">
+                    <div class="mb-3">
+                        <span class="form-label d-block">Cetak</span>
+                        <div class="btn-group" role="group" aria-label="Cetak per">
+                            <input type="radio" class="btn-check" name="per" id="perRuang" value="ruang" checked>
+                            <label class="btn btn-outline-primary" for="perRuang"><i class="bi bi-door-open me-1"></i>Per Ruang</label>
+                            <input type="radio" class="btn-check" name="per" id="perKelas" value="kelas">
+                            <label class="btn btn-outline-primary" for="perKelas"><i class="bi bi-people me-1"></i>Per Kelas</label>
+                        </div>
+                    </div>
                     <div class="row g-3">
-                        <div class="col-sm-6">
+                        <div class="col-sm-6" data-per="ruang">
                             <label class="form-label" for="fRuang">Ruang</label>
                             <select class="form-select" id="fRuang" name="ruang">
                                 <option value="">Semua ruang (<?= (int) $total ?> peserta)</option>
                                 <option value="0">(tanpa ruang)</option>
                                 <?php foreach ($ruangList as $r): ?>
                                     <option value="<?= (int) $r['id'] ?>"><?= esc($r['nama']) ?> (<?= (int) $r['jumlah'] ?> peserta)</option>
+                                <?php endforeach ?>
+                            </select>
+                        </div>
+                        <div class="col-sm-6 d-none" data-per="kelas">
+                            <label class="form-label" for="fKelas">Kelas</label>
+                            <select class="form-select" id="fKelas" name="kelas" disabled>
+                                <option value="__semua">Semua kelas (<?= (int) $total ?> peserta)</option>
+                                <?php foreach ($kelasList as $k): ?>
+                                    <option value="<?= esc($k['kelas'], 'attr') ?>"><?= esc($k['kelas'] !== '' ? $k['kelas'] : '(tanpa kelas)') ?> (<?= (int) $k['jumlah'] ?> peserta)</option>
                                 <?php endforeach ?>
                             </select>
                         </div>
@@ -49,10 +67,30 @@
         <div class="card">
             <div class="card-body small text-muted">
                 <p class="mb-2"><strong>Kartu peserta</strong>: 8 kartu per halaman A4, berisi nama, nomor peserta, username, password, ruang, sesi, nama kegiatan, logo, dan tanda tangan kepala sekolah.</p>
+                <p class="mb-2"><strong>Per Ruang / Per Kelas</strong>: kartu dikelompokkan menurut ruang atau kelas; tiap ruang/kelas mulai di halaman baru dengan namanya tertulis di atas, jadi mudah dipotong dan dibagikan. Pilih "Semua" untuk mencetak semuanya sekaligus.</p>
                 <p class="mb-2"><strong>Daftar hadir</strong>: satu halaman per ruang dan sesi, dengan kolom tanda tangan dan tempat tanda tangan pengawas.</p>
                 <p class="mb-0">Nama kegiatan, identitas sekolah, logo, dan kepala sekolah diatur di <a href="<?= site_url('tools') ?>">Tools</a>. PDF terbuka di tab baru; cetak dari sana.</p>
             </div>
         </div>
     </div>
 </div>
+<?= $this->endSection() ?>
+
+<?= $this->section('scripts') ?>
+<script>
+(function () {
+    'use strict';
+    // Per Ruang / Per Kelas: tampilkan pilihan yang sesuai; pilihan tersembunyi tidak ikut dikirim.
+    var sync = function () {
+        var per = document.querySelector('input[name=per]:checked').value;
+        document.querySelectorAll('[data-per]').forEach(function (el) {
+            var on = el.dataset.per === per;
+            el.classList.toggle('d-none', !on);
+            el.querySelectorAll('select').forEach(function (s) { s.disabled = !on; });
+        });
+    };
+    document.querySelectorAll('input[name=per]').forEach(function (r) { r.addEventListener('change', sync); });
+    sync();
+})();
+</script>
 <?= $this->endSection() ?>

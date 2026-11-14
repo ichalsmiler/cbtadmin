@@ -2,7 +2,13 @@
 use App\Libraries\School;
 
 $tanggal = School::tanggal(time(), false);
-$pages   = array_chunk($rows, 8);
+// Tiap ruang/kelas dimulai di halaman baru; 8 kartu per halaman dengan label kelompok di atasnya.
+$pages = [];
+foreach ($groups as $label => $rows) {
+    foreach (array_chunk($rows, 8) as $i => $chunk) {
+        $pages[] = ['label' => $label, 'part' => $i + 1, 'parts' => (int) ceil(count($rows) / 8), 'count' => count($rows), 'rows' => $chunk];
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
@@ -11,7 +17,7 @@ $pages   = array_chunk($rows, 8);
     @page { margin: 8mm; }
     table.grid { width: 100%; border-collapse: separate; border-spacing: 3mm 2.5mm; }
     table.grid > tbody > tr > td { width: 50%; vertical-align: top; padding: 0; }
-    .kartu { border: 1px solid #333; height: 59mm; padding: 1.8mm 2.5mm; font-size: 7.2pt; line-height: 1.25; }
+    .kartu { border: 1px solid #333; height: 58mm; padding: 1.8mm 2.5mm; font-size: 7.2pt; line-height: 1.25; }
     .kartu table { width: 100%; border-collapse: collapse; }
     .kartu .head { border-bottom: 1px solid #333; margin-bottom: 1.2mm; }
     .kartu .head td { vertical-align: middle; padding-bottom: 1mm; }
@@ -23,12 +29,18 @@ $pages   = array_chunk($rows, 8);
     .kartu .akun { font-family: "DejaVu Sans Mono", monospace; font-weight: bold; font-size: 8.2pt; white-space: nowrap; }
     .kartu .ttd { font-size: 6.3pt; text-align: center; line-height: 1.2; }
     .kartu .ttd .space { height: 7mm; }
+    .kelompok { font-size: 8pt; font-weight: bold; margin: 0 3mm; border-bottom: 1px solid #999; padding-bottom: 0.5mm; }
+    .kelompok span { font-weight: normal; color: #555; }
 </style>
 </head>
 <body>
 <?php foreach ($pages as $p => $page): ?>
+    <div class="kelompok">
+        <?= esc($page['label']) ?>
+        <span>· <?= (int) $page['count'] ?> peserta<?= $page['parts'] > 1 ? ' · halaman ' . $page['part'] . '/' . $page['parts'] : '' ?></span>
+    </div>
     <table class="grid">
-        <?php foreach (array_chunk($page, 2) as $pair): ?>
+        <?php foreach (array_chunk($page['rows'], 2) as $pair): ?>
             <tr>
                 <?php foreach ($pair as $r): ?>
                     <td>

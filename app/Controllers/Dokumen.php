@@ -25,7 +25,8 @@ class Dokumen extends PanelController
 
         return $this->render('dokumen/cetak', [
             'title'     => 'Kartu / Daftar Hadir',
-            'ruangList' => $db->query('SELECT r.id, r.nama, (SELECT COUNT(*) FROM peserta p WHERE p.ruang_id = r.id) AS jumlah FROM ruang r ORDER BY r.nama')->getResultArray(),
+            'ruangList' => $db->query('SELECT r.id, r.nama, (SELECT COUNT(*) FROM peserta p WHERE p.ruang_id = r.id) AS jumlah FROM ruang r ORDER BY LENGTH(r.nama), r.nama')->getResultArray(),
+            'kelasList' => $db->query("SELECT kelas, COUNT(*) AS jumlah FROM peserta GROUP BY kelas ORDER BY kelas")->getResultArray(),
             'sesiList'  => $db->table('sesi')->orderBy('nama')->get()->getResultArray(),
             'quizzes'   => $quizzes,
             'total'     => $db->table('peserta')->countAllResults(),
@@ -36,11 +37,20 @@ class Dokumen extends PanelController
     {
         $rows = $this->pesertaCetak();
         if ($rows === []) {
-            return redirect()->to(site_url('dokumen/cetak_doc'))->with('error', 'Tidak ada peserta untuk pilihan ruang/sesi ini.');
+            return redirect()->to(site_url('dokumen/cetak_doc'))->with('error', 'Tidak ada peserta untuk pilihan ini.');
         }
-        ActivityLog::add('cetak_kartu', count($rows) . ' kartu');
 
-        return Pdf::respond('pdf/kartu', ['rows' => $rows], 'kartu_peserta.pdf');
+        // Per ruang atau per kelas: tiap ruang/kelas mulai di halaman baru, berlabel di atasnya.
+        $perKelas = $this->request->getGet('per') === 'kelas';
+        $groups   = [];
+        foreach ($rows as $r) {
+            $label            = $perKelas ? 'Kelas ' . ($r['kelas'] !== '' ? $r['kelas'] : '(tanpa kelas)') : 'Ruang ' . ($r['ruang_nama'] ?? '(tanpa ruang)');
+            $groups[$label][] = $r;
+        }
+        uksort($groups, 'strnatcasecmp');
+        ActivityLog::add('cetak_kartu', count($rows) . ' kartu, per ' . ($perKelas ? 'kelas' : 'ruang') . ', ' . count($groups) . ' kelompok');
+
+        return Pdf::respond('pdf/kartu', ['groups' => $groups], 'kartu_peserta_per_' . ($perKelas ? 'kelas' : 'ruang') . '.pdf');
     }
 
     public function daftarHadir()
@@ -70,11 +80,13 @@ class Dokumen extends PanelController
         return Pdf::respond('pdf/daftar_hadir', ['groups' => $groups, 'mapel' => $mapel], 'daftar_hadir.pdf');
     }
 
-    /** Peserta Data CBTAdmin menurut ruang dan sesi, dengan sesi ruang sebagai cadangan. */
+    /** Peserta Data CBTAdmin menurut ruang/kelas dan sesi, dengan sesi ruang sebagai cadangan. */
     private function pesertaCetak(): array
     {
-        $ruangId = (string) $this->request->getGet('ruang');
-        $sesiId  = (string) $this->request->getGet('sesi');
+        $perKelas = $this->request->getGet('per') === 'kelas';
+        $ruangId  = $perKelas ? '' : (string) $this->request->getGet('ruang');
+        $kelas    = $perKelas ? $this->request->getGet('kelas') : null;
+        $sesiId   = (string) $this->request->getGet('sesi');
 
         $builder = db_connect()->table('peserta p')
             ->select('p.*, r.nama AS ruang_nama, r.pengawas, s.nama AS sesi_nama, s.jam_mulai, s.jam_selesai')
@@ -85,11 +97,19 @@ class Dokumen extends PanelController
         } elseif ($ruangId !== '') {
             $builder->where('p.ruang_id', (int) $ruangId);
         }
+        if ($kelas !== null && $kelas !== '__semua') {
+            $builder->where('p.kelas', (string) $kelas);
+        }
         if ($sesiId !== '') {
             $builder->where('COALESCE(p.sesi_id, r.sesi_id)', (int) $sesiId, false);
         }
+        if ($perKelas) {
+            $builder->orderBy('p.kelas')->orderBy('p.nama');
+        } else {
+            $builder->orderBy('r.nama')->orderBy('s.nama')->orderBy('p.nomor_peserta')->orderBy('p.nama');
+        }
 
-        return $builder->orderBy('r.nama')->orderBy('s.nama')->orderBy('p.nomor_peserta')->orderBy('p.nama')->get()->getResultArray();
+        return $builder->get()->getResultArray();
     }
 
     // ------------------------------------------------------------------ Laporan Kehadiran
