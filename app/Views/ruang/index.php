@@ -43,7 +43,7 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="ruang-avatar text-bg-<?= $warna[$i % count($warna)] ?>"><?= chr(65 + $i % 26) ?></span>
                                     <div>
-                                        <div class="fw-semibold"><?= esc($r['username'] ?? '–') ?></div>
+                                        <div class="fw-semibold text-nowrap"><?= esc($r['username'] ?? '–') ?></div>
                                         <div class="small text-primary">Ruang <?= esc($r['nama']) ?><?= $r['sesi_nama'] ? ' · ' . esc($r['sesi_nama']) : '' ?></div>
                                     </div>
                                 </div>
@@ -63,9 +63,9 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
                                 </button>
                             </td>
                             <td class="text-center text-nowrap">
-                                <button class="btn btn-sm btn-link" type="button" title="Generate Kode: buat password pengawas baru"
+                                <button class="btn btn-sm btn-link" type="button" title="Generate Kode: kode login dan password baru"
                                         data-post="<?= site_url('daftar_ruang/kode/' . $r['id']) ?>"
-                                        data-confirm-text="Buat password baru untuk pengawas Ruang <?= esc($r['nama'], 'attr') ?>? Password lama tidak berlaku lagi.">
+                                        data-confirm-text="Generate kode login baru untuk Ruang <?= esc($r['nama'], 'attr') ?>? Kode login dan password lama tidak berlaku lagi.">
                                     <i class="bi bi-key fs-5"></i>
                                 </button>
                                 <div class="dropdown d-inline-block">
@@ -93,7 +93,7 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
                 <strong>Kode Login</strong> dan password dipakai pengawas untuk login ke CBT Admin di
                 <code><?= esc(site_url('login')) ?></code>; bagikan lewat <strong>Cetak ID Login</strong>.
                 <strong>Tukar</strong> = masuk sebagai pengawas ruang itu untuk melihat tampilannya.
-                <strong>Aksi</strong> (ikon kunci) = buat password baru bila kartu login hilang.
+                <strong>Aksi</strong> (ikon kunci) = Generate Kode: kode login dan password baru, mis. bila kartu login hilang.
             </p>
         <?php endif ?>
     </div>

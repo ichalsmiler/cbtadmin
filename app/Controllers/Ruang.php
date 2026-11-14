@@ -16,6 +16,9 @@ class Ruang extends PanelController
     {
         $db = db_connect();
         Pengawas::sync();  // setiap ruang selalu punya akun pengawas
+        if (($n = Pengawas::rapikanKode()) > 0) {
+            ActivityLog::add('kode_login_ruang', $n . ' akun pengawas diubah ke format NPSN-kode');
+        }
 
         return $this->render('ruang/index', [
             'title' => 'Daftar Ruang',
@@ -44,10 +47,10 @@ class Ruang extends PanelController
         if (! $akun) {
             return redirect()->to(site_url('daftar_ruang'))->with('error', 'Ruang ini belum punya akun pengawas.');
         }
-        Pengawas::resetPasswords([(int) $akun['id']]);
-        ActivityLog::add('generate_kode_ruang', $akun['username']);
+        $baru = Pengawas::kodeBaru((int) $akun['id']);
+        ActivityLog::add('generate_kode_ruang', $akun['username'] . ' -> ' . $baru['username']);
 
-        return redirect()->to(site_url('daftar_ruang'))->with('success', 'Password baru untuk ' . $akun['username'] . ' dibuat. Cetak ulang ID Login ruang ini.');
+        return redirect()->to(site_url('daftar_ruang'))->with('success', 'Kode login baru Ruang ' . $this->namaRuang($id) . ': ' . $baru['username'] . ' (password juga baru). Cetak ulang ID Login ruang ini.');
     }
 
     /** Tukar Akses: administrator masuk sebagai pengawas ruang; kembali lewat tombol di atas halaman. */
@@ -105,6 +108,11 @@ class Ruang extends PanelController
             ->join('admins a', "a.ruang_id = r.id AND a.role = 'proktor'", 'left')
             ->orderBy('LENGTH(r.nama)', '', false)->orderBy('r.nama')
             ->get()->getResultArray();
+    }
+
+    private function namaRuang(int $ruangId): string
+    {
+        return (string) (db_connect()->table('ruang')->select('nama')->where('id', $ruangId)->get()->getRowArray()['nama'] ?? $ruangId);
     }
 
     private function akunPengawas(int $ruangId): ?array
