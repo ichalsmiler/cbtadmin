@@ -28,7 +28,8 @@ dan `vendor/` diunduh di server oleh `deploy/install.sh`.
 - `deploy/install-moodle.sh` — pasang Moodle baru (Nginx, PHP-FPM, MariaDB, Redis).
 - `deploy/setelan-moodle.sh` + `deploy/moodle/` — setelan Moodle untuk ujian (lihat di bawah).
 - `moodle/local/` — plugin Moodle, dipasang oleh `setelan-moodle.sh`: `cbtblokir` (pesan "User Anda
-  terblokir" saat login) dan `cbtnama` (nama depan di samping ikon profil kanan atas).
+  terblokir" saat login), `cbtnama` (nama depan di samping ikon profil kanan atas), dan `cbtujian` (Anti Submit,
+  Lock login, Resume timer, Anti Newtab; diatur dari CBT Admin → Tools).
 - `deploy/ha/` — server utama + cadangan.
 
 ## Server baru dari nol

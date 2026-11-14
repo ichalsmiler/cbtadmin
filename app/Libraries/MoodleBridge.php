@@ -44,4 +44,27 @@ class MoodleBridge
 
         return $result['items'] ?? [];
     }
+
+    /**
+     * Jalankan cron Moodle sekali (tanpa keep-alive) dan kembalikan [berhasil, baris terakhir keluaran].
+     * Cron Moodle sendiri juga berjalan tiap menit; Moodle memakai kunci sehingga tidak bentrok.
+     */
+    public static function cron(): array
+    {
+        $dir     = dirname((string) env('moodle.configPath', '/var/www/moodle/config.php'));
+        $command = [(string) env('cbt.phpBin', '/usr/bin/php'), $dir . '/admin/cli/cron.php', '--keep-alive=0'];
+        @set_time_limit(600);
+        $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+        if (! is_resource($process)) {
+            throw new RuntimeException('Cron Moodle tidak bisa dijalankan.');
+        }
+        fclose($pipes[0]);
+        $out  = (string) stream_get_contents($pipes[1]) . (string) stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($process);
+        $tail = array_slice(array_values(array_filter(array_map('trim', explode("\n", $out)))), -3);
+
+        return [$code === 0, implode(' · ', $tail)];
+    }
 }

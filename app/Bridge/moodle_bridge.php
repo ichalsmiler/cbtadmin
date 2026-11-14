@@ -337,6 +337,62 @@ try {
             }
             break;
 
+        case 'cbtujian_config':
+            // Aturan ujian di plugin local_cbtujian. Lock login menolak login baru, jadi batas
+            // "satu akun satu perangkat" bawaan Moodle (yang menendang sesi lama) dimatikan.
+            foreach (['antisubmit', 'locklogin', 'resumetimer', 'antinewtab'] as $key) {
+                if (array_key_exists($key, $in)) {
+                    set_config($key, max(0, (int) $in[$key]), 'local_cbtujian');
+                }
+            }
+            set_config('limitconcurrentlogins', empty($in['locklogin']) ? 1 : 0);
+            $result['items'][] = ['status' => 'disimpan', 'plugin' => (bool) core_plugin_manager::instance()->get_plugin_info('local_cbtujian')];
+            break;
+
+        case 'purge_caches':
+            // Purge = cara resmi Moodle; Delete = hapus juga isi folder cache di moodledata lalu purge.
+            if (! empty($in['hapus'])) {
+                foreach ([$CFG->cachedir, $CFG->localcachedir] as $dir) {
+                    if ($dir && is_dir($dir)) {
+                        remove_dir($dir, true);
+                    }
+                }
+            }
+            purge_all_caches();
+            $result['items'][] = ['status' => empty($in['hapus']) ? 'purge' : 'delete'];
+            break;
+
+        case 'create_category':
+            $name = trim((string) $in['name']);
+            if ($name === '') {
+                throw new RuntimeException('Nama ujian wajib diisi.');
+            }
+            if ($DB->record_exists('course_categories', ['name' => $name, 'parent' => 0])) {
+                throw new RuntimeException('Ujian "' . $name . '" sudah ada.');
+            }
+            $cat = core_course_category::create(['name' => $name, 'parent' => 0]);
+            $result['items'][] = ['id' => (int) $cat->id, 'status' => 'dibuat'];
+            break;
+
+        case 'create_course':
+            // Mapel baru memakai bawaan course (Single activity + Quiz) dan tersembunyi sampai
+            // diaktifkan di Status Test.
+            require_once $CFG->dirroot . '/course/lib.php';
+            $fullname  = trim((string) $in['fullname']);
+            $shortname = trim((string) $in['shortname']);
+            if ($fullname === '' || $shortname === '') {
+                throw new RuntimeException('Nama pelajaran dan shortname wajib diisi.');
+            }
+            if ($DB->record_exists('course', ['shortname' => $shortname])) {
+                throw new RuntimeException('Shortname "' . $shortname . '" sudah dipakai pelajaran lain.');
+            }
+            core_course_category::get((int) $in['category'], MUST_EXIST, true);
+            $course = create_course((object) [
+                'fullname' => $fullname, 'shortname' => $shortname, 'category' => (int) $in['category'], 'visible' => 0,
+            ]);
+            $result['items'][] = ['id' => (int) $course->id, 'status' => 'dibuat'];
+            break;
+
         case 'session_gc':
             // Hapus sesi Moodle yang sudah melewati batas waktu sesi situs.
             \core\session\manager::gc();

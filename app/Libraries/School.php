@@ -12,34 +12,61 @@ class School
 
     public static function info(): array
     {
-        $path = self::logoPath();
+        $dataUri = static fn (?string $p): ?string => $p ? 'data:' . mime_content_type($p) . ';base64,' . base64_encode((string) file_get_contents($p)) : null;
 
         return [
             'nama_sekolah'   => Settings::get('nama_sekolah', (string) env('cbt.namaSekolah', '')),
             'npsn'           => Settings::get('npsn', (string) env('cbt.npsn', '')),
             'alamat'         => Settings::get('alamat'),
             'kota'           => Settings::get('kota'),
+            // Pimpinan: jabatan (Kepala Sekolah / Kepala Madrasah), nama, jenis nomor (NIP/NIY) dan nomornya.
+            'jabatan'        => Settings::get('jabatan_pimpinan', 'Kepala Sekolah') ?: 'Kepala Sekolah',
             'kepala_sekolah' => Settings::get('kepala_sekolah'),
+            'jenis_nomor'    => Settings::get('jenis_nomor_pimpinan', 'NIP') ?: 'NIP',
             'nip_kepala'     => Settings::get('nip_kepala'),
             'nama_kegiatan'  => Settings::get('nama_kegiatan'),
-            'logo'           => $path ? 'data:' . mime_content_type($path) . ';base64,' . base64_encode((string) file_get_contents($path)) : null,
+            'tahun_ajaran'   => Settings::get('tahun_ajaran'),
+            'alamat_server'  => Settings::get('alamat_server'),
+            'logo'           => $dataUri(self::logoPath()),
+            'ttd'            => $dataUri(self::ttdPath()),
         ];
     }
 
     public static function logoPath(): ?string
     {
-        $name = basename(Settings::get('logo_file'));
+        return self::gambar('logo_file');
+    }
+
+    /** Tanda tangan pimpinan (untuk kartu peserta dan dokumen). */
+    public static function ttdPath(): ?string
+    {
+        return self::gambar('ttd_file');
+    }
+
+    public static function removeLogo(): void
+    {
+        self::hapus('logo');
+    }
+
+    public static function removeTtd(): void
+    {
+        self::hapus('ttd');
+    }
+
+    private static function gambar(string $key): ?string
+    {
+        $name = basename(Settings::get($key));
         $path = self::UPLOAD_DIR . $name;
 
         return $name !== '' && is_file($path) ? $path : null;
     }
 
-    public static function removeLogo(): void
+    private static function hapus(string $jenis): void
     {
-        foreach (glob(self::UPLOAD_DIR . 'logo.*') ?: [] as $file) {
+        foreach (glob(self::UPLOAD_DIR . $jenis . '.*') ?: [] as $file) {
             @unlink($file);
         }
-        Settings::set('logo_file', '');
+        Settings::set($jenis . '_file', '');
     }
 
     /** "Jumat, 13 November 2026" */

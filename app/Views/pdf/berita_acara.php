@@ -50,10 +50,14 @@ $last = count($ruang) - 1;
     <table class="ttd">
         <tr>
             <td>
-                Mengetahui,<br>Kepala Sekolah
-                <div class="space"></div>
+                Mengetahui,<br><?= esc($school['jabatan']) ?>
+                <?php if ($school['ttd']): ?>
+                    <div class="space"><img src="<?= $school['ttd'] ?>" alt="" style="max-height:100%; width:auto"></div>
+                <?php else: ?>
+                    <div class="space"></div>
+                <?php endif ?>
                 <strong><?= esc($school['kepala_sekolah'] !== '' ? $school['kepala_sekolah'] : '..............................') ?></strong><br>
-                NIP <?= esc($school['nip_kepala'] !== '' ? $school['nip_kepala'] : '..............................') ?>
+                <?= esc($school['jenis_nomor']) ?> <?= esc($school['nip_kepala'] !== '' ? $school['nip_kepala'] : '..............................') ?>
             </td>
             <td>
                 <?= esc($school['kota'] !== '' ? $school['kota'] . ', ' : '') ?><?= (int) $quiz['timeopen'] > 0 ? School::tanggal((int) $quiz['timeopen'], false) : '..............................' ?><br>

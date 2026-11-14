@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\ActivityLog;
 use App\Libraries\Pdf;
 use App\Libraries\Pengawas;
+use App\Libraries\Settings;
 
 /**
  * Daftar Ruang (seperti AIOCBT): tiap ruang punya akun login pengawas (Kode Login + password),
@@ -96,7 +97,18 @@ class Ruang extends PanelController
         }
         ActivityLog::add('cetak_id_login', count($rows) . ' ruang');
 
-        return Pdf::respond('pdf/id_login', ['rows' => $rows, 'url' => site_url('login')], 'id_login_pengawas.pdf');
+        return Pdf::respond('pdf/id_login', ['rows' => $rows, 'url' => $this->alamatLogin()], 'id_login_pengawas.pdf');
+    }
+
+    /** Alamat login pengawas: dari Tools → Info Kegiatan (alamat server ujian), atau alamat panel ini. */
+    private function alamatLogin(): string
+    {
+        $server = rtrim(trim(Settings::get('alamat_server')), '/');
+        if ($server === '') {
+            return site_url('login');
+        }
+
+        return str_contains($server, '/cbtadmin') ? $server . '/login' : $server . '/cbtadmin/login';
     }
 
     private function ruangRows(): array

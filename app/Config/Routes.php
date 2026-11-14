@@ -16,7 +16,14 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
 
     $routes->get('tools', 'Tools::index');
     $routes->post('tools', 'Tools::save');
-    $routes->get('tools/logo', 'Tools::logo');
+    $routes->get('tools/gambar/(logo|ttd)', 'Tools::gambar/$1');
+    $routes->post('tools/ujian', 'Tools::ujian');
+    $routes->post('tools/password', 'Tools::gantiPassword');
+    $routes->post('tools/cron', 'Tools::cron');
+    $routes->post('tools/cache', 'Tools::cache');
+    $routes->get('tools/test_manage', 'Tools::testManage');
+    $routes->post('tools/test_manage/ujian', 'Tools::tambahUjian');
+    $routes->post('tools/test_manage/mapel', 'Tools::tambahMapel');
     $routes->post('tools/akun/simpan', 'Tools::simpanAkun');
     $routes->post('tools/akun/hapus/(:num)', 'Tools::hapusAkun/$1');
     $routes->get('tools/backup', 'Tools::backup');

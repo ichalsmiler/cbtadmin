@@ -50,7 +50,7 @@ foreach ($groups as $label => $rows) {
                                     <?php if ($school['logo']): ?><td style="width:12mm"><img src="<?= $school['logo'] ?>" alt=""></td><?php endif ?>
                                     <td>
                                         <div class="judul">KARTU PESERTA</div>
-                                        <div class="kecil"><?= esc($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer') ?></div>
+                                        <div class="kecil"><?= esc($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer') ?><?= $school['tahun_ajaran'] !== '' ? ' ' . esc($school['tahun_ajaran']) : '' ?></div>
                                         <div class="kecil"><?= esc($school['nama_sekolah']) ?></div>
                                     </td>
                                 </tr>
@@ -70,10 +70,14 @@ foreach ($groups as $label => $rows) {
                                         </table>
                                     </td>
                                     <td class="ttd" style="vertical-align:top">
-                                        <?= esc($school['kota'] !== '' ? $school['kota'] . ', ' : '') . $tanggal ?><br>Kepala Sekolah
-                                        <div class="space"></div>
+                                        <?= esc($school['kota'] !== '' ? $school['kota'] . ', ' : '') . $tanggal ?><br><?= esc($school['jabatan']) ?>
+                                        <?php if ($school['ttd']): ?>
+                                            <div class="space"><img src="<?= $school['ttd'] ?>" alt="" style="height:7mm; width:auto"></div>
+                                        <?php else: ?>
+                                            <div class="space"></div>
+                                        <?php endif ?>
                                         <strong><?= esc($school['kepala_sekolah'] !== '' ? $school['kepala_sekolah'] : '........................') ?></strong><br>
-                                        <?= $school['nip_kepala'] !== '' ? 'NIP ' . esc($school['nip_kepala']) : '' ?>
+                                        <?= $school['nip_kepala'] !== '' ? esc($school['jenis_nomor']) . ' ' . esc($school['nip_kepala']) : '' ?>
                                     </td>
                                 </tr>
                             </table>

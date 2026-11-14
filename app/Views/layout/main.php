@@ -15,6 +15,10 @@ $menu = [
     ['Tools', 'gear', 'tools'],
     ['Keluar', 'box-arrow-right', 'logout'],
 ];
+// Lock login aktif (Tools): peserta yang masih tercatat login perlu di-reset pengawas.
+if (\App\Libraries\Settings::get('lock_login', '0') === '1') {
+    array_splice($menu, 5, 0, [['Reset Login Peserta', 'person-x', 'reset_login']]);
+}
 $isActive = static fn (string $path): bool => $path === '' ? $current === '' : ($current === $path || str_starts_with($current, $path . '/'));
 $asset    = static fn (string $file): string => base_url('assets/' . $file);
 ?>
