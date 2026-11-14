@@ -19,6 +19,11 @@ class TokenCron extends BaseCommand
 
     public function run(array $params)
     {
+        // Server cadangan (deploy/ha) hanya menyalin data; token diurus server utama.
+        if (trim((string) @file_get_contents('/etc/cbt-ha-peran')) === 'cadangan') {
+            return EXIT_SUCCESS;
+        }
+
         try {
             if (ActiveTest::due()) {
                 $token = ActiveTest::release();

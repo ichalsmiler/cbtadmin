@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  CBT HA - SERVER UTAMA
+#  Menyiapkan server utama supaya semua data (termasuk jawaban siswa) terus
+#  tersalin ke server cadangan:
+#    - WireGuard: jalur pribadi terenkripsi antar-VPS (10.77.0.1 <-> 10.77.0.2)
+#    - MariaDB: binlog + user replikasi untuk server cadangan
+#    - rsync: sumber salinan moodledata dan upload CBT Admin
+#    - Nginx: HTTPS dengan sertifikat Cloudflare Origin + IP asli siswa
+#    - Moodle: alamat https://DOMAIN, autosave quiz tiap 60 detik
+#
+#  Syarat: Moodle (install-moodle.sh) dan CBT Admin sudah terpasang,
+#          ha.conf sudah diisi, sertifikat Cloudflare Origin sudah disalin.
+#
+#  Pakai (sebagai root):
+#    bash ha-utama.sh pasang    # sekali, SEBELUM ha-cadangan.sh pasang
+#    bash ha-utama.sh status    # cek WireGuard dan replikasi
+# =============================================================================
+set -euo pipefail
+
+PERAN="utama"; PEER_PERAN="cadangan"
+WG_IF="wg-cbt"; WG_PORT=51820; WG_IP="10.77.0.1"; PEER_WG_IP="10.77.0.2"
+MOODLE_DIR="/var/www/moodle"; CONFIG="$MOODLE_DIR/config.php"
+DATA_DIR="/var/moodledata"; CBT_DIR="/var/www/cbtadmin"
+HA_DIR="/etc/cbt-ha"; ROLE_FILE="/etc/cbt-ha-peran"; SSL_DIR="/etc/ssl/cbt"
+DB_CNF="/etc/mysql/mariadb.conf.d/90-cbt-ha.cnf"
+
+log()  { echo -e "\n\033[1;32m==> $*\033[0m"; }
+warn() { echo -e "\033[1;33m[PERINGATAN] $*\033[0m"; }
+die()  { echo -e "\033[1;31m[GAGAL] $*\033[0m" >&2; exit 1; }
+
+# ----------------------------------------------------------------- umum
+load_conf() {
+    local src=""
+    for f in "$HA_DIR/ha.conf" "$(dirname "$(readlink -f "$0")")/ha.conf" ./ha.conf; do
+        if [ -f "$f" ]; then src="$f"; break; fi
+    done
+    [ -n "$src" ] || die "ha.conf tidak ditemukan. Salin ha.conf.contoh menjadi ha.conf (di folder skrip ini) lalu isi."
+    # shellcheck disable=SC1090
+    . "$src"
+    local v
+    for v in DOMAIN UTAMA_IP CADANGAN_IP HA_SECRET; do
+        [ -n "${!v:-}" ] || die "$v di ha.conf belum diisi."
+    done
+    [ "${#HA_SECRET}" -ge 32 ] || die "HA_SECRET terlalu pendek. Buat dengan: openssl rand -hex 32"
+    mkdir -p "$HA_DIR"; chmod 700 "$HA_DIR"
+    if [ "$(readlink -f "$src")" != "$HA_DIR/ha.conf" ]; then install -m 600 "$src" "$HA_DIR/ha.conf"; fi
+}
+
+# Kunci dan password diturunkan dari HA_SECRET, jadi kedua server bisa
+# menghitungnya sendiri tanpa saling bertukar kunci.
+derive()      { printf '%s' "$1:$HA_SECRET" | openssl dgst -sha256 -binary | base64; }
+derive_pass() { derive "$1" | tr -dc 'A-Za-z0-9' | cut -c1-32; }
+
+check_prereq() {
+    [ "$(id -u)" -eq 0 ] || die "Jalankan sebagai root."
+    [ -f "$CONFIG" ] || die "Moodle belum terpasang ($CONFIG tidak ada). Jalankan install-moodle.sh dulu."
+    [ -f "$CBT_DIR/.env" ] || die "CBT Admin belum terpasang ($CBT_DIR/.env tidak ada)."
+    local ver
+    ver="$(mariadb -N -e 'SELECT VERSION()' | cut -d. -f1-2)"
+    printf '%s\n%s\n' "10.11" "$ver" | sort -V -C || die "MariaDB $ver terlalu lama; butuh 10.11+ (Debian 12/13)."
+}
+
+setup_wireguard() {
+    local peer_ip="$1" peer_pub
+    log "WireGuard: $WG_IP (server ini) <-> $PEER_WG_IP ($peer_ip)"
+    apt-get install -y wireguard-tools rsync >/dev/null
+    peer_pub="$(derive "wg-$PEER_PERAN" | wg pubkey)"
+    cat > "/etc/wireguard/$WG_IF.conf" <<EOF
+# Jalur pribadi CBT HA (dibuat oleh ha-$PERAN.sh)
+[Interface]
+Address = $WG_IP/24
+ListenPort = $WG_PORT
+PrivateKey = $(derive "wg-$PERAN")
+
+[Peer]
+PublicKey = $peer_pub
+Endpoint = $peer_ip:$WG_PORT
+AllowedIPs = $PEER_WG_IP/32
+PersistentKeepalive = 25
+EOF
+    chmod 600 "/etc/wireguard/$WG_IF.conf"
+    systemctl enable "wg-quick@$WG_IF" >/dev/null 2>&1
+    systemctl restart "wg-quick@$WG_IF"
+    if command -v ufw >/dev/null && ufw status | grep -q "Status: active"; then
+        ufw allow from "$peer_ip" to any port "$WG_PORT" proto udp >/dev/null
+    fi
+    # Layanan yang mendengarkan di IP WireGuard boleh start sebelum jalurnya naik.
+    echo "net.ipv4.ip_nonlocal_bind = 1" > /etc/sysctl.d/90-cbt-ha.conf
+    sysctl -q -p /etc/sysctl.d/90-cbt-ha.conf
+    local svc
+    for svc in mariadb rsync; do
+        mkdir -p "/etc/systemd/system/$svc.service.d"
+        printf '[Unit]\nAfter=wg-quick@%s.service\nWants=wg-quick@%s.service\n' "$WG_IF" "$WG_IF" \
+            > "/etc/systemd/system/$svc.service.d/cbt-ha.conf"
+    done
+    systemctl daemon-reload
+}
+
+setup_web() {
+    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat https://$DOMAIN"
+    [ -s "$SSL_DIR/origin.pem" ] && [ -s "$SSL_DIR/origin.key" ] || die "Sertifikat Cloudflare Origin belum ada.
+  Buat di Cloudflare > SSL/TLS > Origin Server > Create Certificate, lalu simpan:
+    $SSL_DIR/origin.pem   (Origin Certificate)
+    $SSL_DIR/origin.key   (Private Key)
+  dan set Cloudflare > SSL/TLS > Overview ke mode Full (strict)."
+    chmod 600 "$SSL_DIR/origin.key"
+
+    local site=/etc/nginx/sites-available/moodle
+    if ! grep -q "listen 443" "$site"; then
+        sed -i "/listen \[::\]:80 default_server;/a\\    listen 443 ssl default_server;\\n    listen [::]:443 ssl default_server;\\n    ssl_certificate $SSL_DIR/origin.pem;\\n    ssl_certificate_key $SSL_DIR/origin.key;" "$site"
+    fi
+
+    local tmp; tmp="$(mktemp)"
+    if { echo "# IP asli siswa di belakang Cloudflare (dibuat oleh ha-$PERAN.sh)"
+         curl -fsS --retry 3 https://www.cloudflare.com/ips-v4
+         echo
+         curl -fsS --retry 3 https://www.cloudflare.com/ips-v6
+       } > "$tmp.raw"; then
+        { head -1 "$tmp.raw"; sed -n '2,$p' "$tmp.raw" | sed -E '/^\s*$/d; s/^(.*)$/set_real_ip_from \1;/'
+          echo "real_ip_header CF-Connecting-IP;"; } > "$tmp"
+        install -m 644 "$tmp" /etc/nginx/conf.d/cloudflare-realip.conf
+    else
+        warn "Daftar IP Cloudflare gagal diunduh; log Moodle akan mencatat IP Cloudflare, bukan IP siswa."
+    fi
+    rm -f "$tmp" "$tmp.raw"
+    nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
+    systemctl reload nginx
+
+    local url="https://$DOMAIN" pat
+    pat='^([$]CFG->wwwroot[[:space:]]*=).*'
+    sed -i -E "s#$pat#\\1 '$url';#" "$CONFIG"
+    php -l "$CONFIG" >/dev/null || die "config.php rusak setelah alamat diganti."
+    sed -i -E "s#^app\.baseURL[[:space:]]*=.*#app.baseURL = '$url/cbtadmin/'#; s#^moodle\.url[[:space:]]*=.*#moodle.url = '$url'#" "$CBT_DIR/.env"
+}
+
+mdl_cfg() { runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" "$@"; }
+
+# ----------------------------------------------------------------- pasang
+pasang() {
+    check_prereq
+    load_conf
+    echo "Server ini disiapkan sebagai UTAMA ($UTAMA_IP). Cadangan: $CADANGAN_IP. Domain: $DOMAIN"
+
+    setup_wireguard "$CADANGAN_IP"
+    setup_web
+
+    log "MariaDB: binlog untuk replikasi ke cadangan"
+    cat > "$DB_CNF" <<EOF
+# Replikasi CBT HA - server UTAMA (dibuat oleh ha-utama.sh)
+[mysqld]
+server_id = 1
+log_bin = /var/log/mysql/mariadb-bin
+binlog_format = ROW
+binlog_expire_logs_seconds = 259200
+log_slave_updates = 1
+gtid_strict_mode = 1
+read_only = 0
+bind_address = 127.0.0.1,$WG_IP
+EOF
+    systemctl restart mariadb
+    # Bila server ini dulunya cadangan (setelah pindah), lepas sisa replikasinya.
+    mariadb -e "STOP SLAVE; RESET SLAVE ALL;" 2>/dev/null || true
+    mariadb -e "SET GLOBAL read_only = 0;"
+    local repl_pass; repl_pass="$(derive_pass repl)"
+    mariadb <<EOF
+CREATE USER IF NOT EXISTS 'cbt_repl'@'$PEER_WG_IP' IDENTIFIED BY '$repl_pass';
+ALTER USER 'cbt_repl'@'$PEER_WG_IP' IDENTIFIED BY '$repl_pass';
+GRANT SELECT, RELOAD, LOCK TABLES, SHOW VIEW, EVENT, TRIGGER, REPLICATION SLAVE, REPLICATION CLIENT
+    ON *.* TO 'cbt_repl'@'$PEER_WG_IP';
+FLUSH PRIVILEGES;
+EOF
+
+    log "rsync: sumber salinan file untuk cadangan (hanya lewat WireGuard)"
+    cat > /etc/rsyncd.conf <<EOF
+# CBT HA - sumber salinan file untuk server cadangan (dibuat oleh ha-utama.sh)
+address = $WG_IP
+uid = www-data
+gid = www-data
+use chroot = yes
+read only = yes
+hosts allow = $PEER_WG_IP
+hosts deny = *
+auth users = cbtsync
+secrets file = /etc/rsyncd.secrets
+max connections = 4
+
+[moodledata]
+path = $DATA_DIR
+exclude = cache/ localcache/ sessions/ temp/ trashdir/ lock/
+
+[cbtupload]
+path = $CBT_DIR/writable/uploads
+EOF
+    echo "cbtsync:$(derive_pass rsync)" > /etc/rsyncd.secrets
+    chmod 600 /etc/rsyncd.secrets
+    systemctl enable rsync >/dev/null 2>&1
+    systemctl restart rsync
+
+    log "Peran server dan cron"
+    echo "$PERAN" > "$ROLE_FILE"; chmod 644 "$ROLE_FILE"
+    rm -f /etc/cron.d/cbt-ha-cadangan
+    local f
+    for f in moodle cbtadmin; do
+        if [ -f "/etc/cron.d/$f.cadangan-off" ]; then mv "/etc/cron.d/$f.cadangan-off" "/etc/cron.d/$f"; fi
+    done
+
+    log "Moodle: autosave jawaban quiz tiap 60 detik"
+    mdl_cfg --component=quiz --name=autosaveperiod --set=60
+    runuser -u www-data -- php "$MOODLE_DIR/admin/cli/purge_caches.php"
+    systemctl reload "php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm"
+
+    echo
+    echo "============================================================"
+    echo "  SERVER UTAMA SIAP"
+    echo "  Alamat ujian : https://$DOMAIN  (arahkan DNS Cloudflare ke $UTAMA_IP, Proxied)"
+    echo "  Berikutnya   : jalankan  bash ha-cadangan.sh pasang  di $CADANGAN_IP"
+    echo "  Pastikan port UDP $WG_PORT terbuka di firewall penyedia VPS kedua server."
+    echo "============================================================"
+}
+
+# ----------------------------------------------------------------- status
+status() {
+    load_conf
+    echo "Peran server ini : $(cat "$ROLE_FILE" 2>/dev/null || echo 'belum diatur')"
+    echo
+    echo "--- WireGuard"
+    local hs
+    hs="$(wg show "$WG_IF" latest-handshakes 2>/dev/null | awk '{print $2}')"
+    if [ -n "$hs" ] && [ "$hs" -gt 0 ]; then
+        echo "Terhubung ke cadangan, kontak terakhir $(( $(date +%s) - hs )) detik lalu"
+    else
+        echo "BELUM terhubung ke cadangan ($PEER_WG_IP)"
+    fi
+    echo
+    echo "--- Replikasi (sumber)"
+    mariadb -N -e "SELECT CONCAT('Posisi GTID       : ', @@gtid_binlog_pos)"
+    mariadb -N -e "SELECT CONCAT('Cadangan tersambung: ', COUNT(*)) FROM information_schema.PROCESSLIST WHERE COMMAND LIKE 'Binlog Dump%'"
+    echo "Ukuran binlog      : $(du -sh /var/log/mysql 2>/dev/null | cut -f1)"
+}
+
+case "${1:-}" in
+    pasang) pasang ;;
+    status) status ;;
+    *) echo "Pakai: bash $0 pasang | status"; exit 1 ;;
+esac

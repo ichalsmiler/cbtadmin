@@ -1,0 +1,28 @@
+# =============================================================================
+#  Konfigurasi server utama + cadangan (CBT HA)
+#  Salin menjadi ha.conf di KEDUA server. Isinya harus SAMA PERSIS.
+#  Setelah skrip dijalankan, salinan aman disimpan di /etc/cbt-ha/ha.conf.
+# =============================================================================
+
+# Alamat ujian yang dibuka siswa (DNS di Cloudflare, mode Proxied / awan oranye)
+DOMAIN="cbt.sekolah.sch.id"
+
+# IP publik kedua VPS
+UTAMA_IP=""
+CADANGAN_IP=""
+
+# Rahasia bersama kedua server (kunci WireGuard, password replikasi, password rsync).
+# Buat sekali dengan:  openssl rand -hex 32
+HA_SECRET=""
+
+# Untuk memindahkan domain ke server cadangan secara otomatis (boleh kosong:
+# nanti IP diganti manual di dashboard Cloudflare).
+# Token: Cloudflare > My Profile > API Tokens > Create Token > "Edit zone DNS",
+#        batasi ke domain ini saja.
+# Zone ID: Cloudflare > domain > Overview (kolom kanan bawah).
+CF_API_TOKEN=""
+CF_ZONE_ID=""
+
+# Backup (disimpan di server cadangan, /var/backups/cbt)
+BACKUP_KEEP_DAYS=7        # simpan berapa hari
+BACKUP_JAM_UJIAN="6-17"   # jam backup database tiap 15 menit (format jam cron)
