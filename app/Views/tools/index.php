@@ -59,8 +59,6 @@ $input = static fn (string $name, string $label, string $value, string $ph = '',
             . '<input type="hidden" name="bagian" value="sekolah"><div class="row g-3">'
             . $input('nama_sekolah', 'Nama sekolah', $v('nama_sekolah'), '', 'col-md-8')
             . $input('npsn', 'NPSN', $v('npsn'), '', 'col-md-4')
-            . $input('alamat', 'Alamat sekolah', $v('alamat'), '', 'col-md-8')
-            . $input('kota', 'Kota (tempat tanda tangan)', $v('kota'), '', 'col-md-4')
             . '<div class="col-12 small text-muted mb-n2">Profil pimpinan: jabatan, nama, dan nomor pegawai.</div>'
             . $input('jabatan_pimpinan', 'Jabatan', $v('jabatan_pimpinan', 'Kepala Sekolah'), 'Kepala Sekolah / Kepala Madrasah', 'col-md-6')
             . $input('kepala_sekolah', 'Nama pimpinan', $v('kepala_sekolah'), 'Nama Pimpinan', 'col-md-6')

@@ -19,7 +19,7 @@ class Tools extends PanelController
 {
     /** Kunci pengaturan per bagian formulir. */
     private const BAGIAN = [
-        'sekolah'  => ['nama_sekolah', 'npsn', 'alamat', 'kota', 'jabatan_pimpinan', 'kepala_sekolah', 'jenis_nomor_pimpinan', 'nip_kepala'],
+        'sekolah'  => ['nama_sekolah', 'npsn', 'jabatan_pimpinan', 'kepala_sekolah', 'jenis_nomor_pimpinan', 'nip_kepala'],
         'kegiatan' => ['nama_kegiatan', 'tahun_ajaran', 'alamat_server'],
         'panel'    => ['webmin_url', 'refresh_interval', 'active_minutes'],
     ];
