@@ -15,9 +15,9 @@ class hook_callbacks {
             return;
         }
         // Kelas disimpan di field department; bila kosong, pakai nama belakang (format impor CBT).
-        // Nama: bila nama belakang hanya berisi kelas, cukup nama depan.
-        $kelas = trim((string) ($USER->department ?: $USER->lastname));
-        $nama  = trim((string) $USER->lastname) === $kelas ? trim((string) $USER->firstname) : fullname($USER);
+        // Format akun CBT: first name = nama siswa, last name = kelas.
+        $nama  = trim((string) $USER->firstname);
+        $kelas = trim((string) $USER->lastname);
 
         $html = \html_writer::div(
             \html_writer::div(s($nama), 'h4 mb-0 fw-bold') .
