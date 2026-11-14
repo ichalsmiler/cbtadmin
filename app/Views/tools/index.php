@@ -75,7 +75,6 @@ $input = static fn (string $name, string $label, string $value, string $ph = '',
             . '<form method="post" action="' . site_url('tools') . '">' . $csrf . '<input type="hidden" name="bagian" value="kegiatan"><div class="row g-3">'
             . $input('nama_kegiatan', 'Nama kegiatan', $v('nama_kegiatan'), 'Nama Kegiatan', 'col-md-8')
             . $input('tahun_ajaran', 'Tahun pelajaran', $v('tahun_ajaran'), 'Cth: 2026/2027', 'col-md-4')
-            . $input('alamat_server', 'Alamat server ujian', $v('alamat_server'), 'Cth: http://172.16.32.154', 'col-12')
             . '</div><button class="btn btn-success btn-sm mt-3" type="submit"><i class="bi bi-save me-1"></i>Simpan</button></form>') ?>
         <?= $item('cbtTools', 'lockres', 'shield-lock', 'Lock login / Resume timer / Anti Newtab',
             '<form method="post" action="' . site_url('tools/ujian') . '">' . $csrf . '<input type="hidden" name="bagian" value="aturan">'
