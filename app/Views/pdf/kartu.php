@@ -1,5 +1,5 @@
 <?php
-// Kartu login peserta (seperti contoh AIOCBT): logo, judul + kegiatan + tahun, QR login; nama, kelas,
+// Kartu login peserta (seperti contoh AIOCBT): logo sekolah, judul + kegiatan + tahun, logo kanan; nama, kelas,
 // username, password, ruang / jam ujian per tingkatan; kotak catatan. 8 kartu per halaman A4,
 // tiap ruang/kelas mulai di halaman baru dengan label kelompok di atasnya.
 $pages = [];
@@ -26,7 +26,7 @@ $tahun    = $school['tahun_ajaran'] !== '' ? 'TAHUN PELAJARAN ' . mb_strtoupper(
     .kartu .head .logo { width: 12mm; }
     .kartu .head .logo img { height: 11mm; width: auto; }
     .kartu .head .qr { width: 14mm; text-align: right; }
-    .kartu .head .qr img { width: 13mm; height: 13mm; }
+    .kartu .head .qr img { height: 11mm; width: auto; }
     .kartu .judul { text-align: center; font-weight: bold; font-size: 8.3pt; line-height: 1.2; }
     .kartu .isi td { padding: 0.55mm 0; vertical-align: top; }
     .kartu .isi .lbl { width: 25mm; }
@@ -59,7 +59,7 @@ $tahun    = $school['tahun_ajaran'] !== '' ? 'TAHUN PELAJARAN ' . mb_strtoupper(
                                         <?= esc($kegiatan) ?>
                                         <?= $tahun !== '' ? '<br>' . esc($tahun) : '' ?>
                                     </td>
-                                    <td class="qr"><img src="<?= $r['qr'] ?>" alt=""></td>
+                                    <td class="qr"><?php if ($school['logo2']): ?><img src="<?= $school['logo2'] ?>" alt=""><?php endif ?></td>
                                 </tr>
                             </table>
                             <table class="isi">

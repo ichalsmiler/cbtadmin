@@ -16,7 +16,7 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
 
     $routes->get('tools', 'Tools::index');
     $routes->post('tools', 'Tools::save');
-    $routes->get('tools/gambar/(logo|ttd)', 'Tools::gambar/$1');
+    $routes->get('tools/gambar/(logo|logo2|ttd)', 'Tools::gambar/$1');
     $routes->post('tools/ujian', 'Tools::ujian');
     $routes->post('tools/password', 'Tools::gantiPassword');
     $routes->post('tools/cron', 'Tools::cron');

@@ -28,6 +28,7 @@ class School
             'tahun_ajaran'   => Settings::get('tahun_ajaran'),
             'alamat_server'  => Settings::get('alamat_server'),
             'logo'           => $dataUri(self::logoPath()),
+            'logo2'          => $dataUri(self::logo2Path()),
             'ttd'            => $dataUri(self::ttdPath()),
         ];
     }
@@ -37,7 +38,13 @@ class School
         return self::gambar('logo_file');
     }
 
-    /** Tanda tangan pimpinan (untuk kartu peserta dan dokumen). */
+    /** Logo kanan kartu peserta (mis. logo pemerintah daerah / dinas). */
+    public static function logo2Path(): ?string
+    {
+        return self::gambar('logo2_file');
+    }
+
+    /** Tanda tangan pimpinan (untuk dokumen). */
     public static function ttdPath(): ?string
     {
         return self::gambar('ttd_file');
@@ -53,6 +60,12 @@ class School
         self::hapus('ttd');
     }
 
+    /** Hapus gambar logo / logo2 / ttd. */
+    public static function hapusGambar(string $jenis): void
+    {
+        self::hapus($jenis);
+    }
+
     private static function gambar(string $key): ?string
     {
         $name = basename(Settings::get($key));
@@ -63,7 +76,8 @@ class School
 
     private static function hapus(string $jenis): void
     {
-        foreach (glob(self::UPLOAD_DIR . $jenis . '.*') ?: [] as $file) {
+        // "logo.*" tidak boleh ikut menghapus "logo2.*", jadi cocokkan nama persis.
+        foreach (glob(self::UPLOAD_DIR . $jenis . '.{png,jpg}', GLOB_BRACE) ?: [] as $file) {
             @unlink($file);
         }
         Settings::set($jenis . '_file', '');

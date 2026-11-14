@@ -77,10 +77,6 @@ if [ ! -d "$APP_DIR/vendor/dompdf/dompdf" ]; then
     log "    Memasang dompdf (cetak PDF)"
     (cd "$APP_DIR" && COMPOSER_ALLOW_SUPERUSER=1 composer require dompdf/dompdf --update-no-dev --no-interaction)
 fi
-if [ ! -d "$APP_DIR/vendor/chillerlan/php-qrcode" ]; then
-    log "    Memasang php-qrcode (QR di kartu peserta)"
-    (cd "$APP_DIR" && COMPOSER_ALLOW_SUPERUSER=1 composer require chillerlan/php-qrcode --update-no-dev --no-interaction)
-fi
 mkdir -p "$APP_DIR/writable/uploads"
 
 # ----------------------------- 4. Database dan .env ---------------------------

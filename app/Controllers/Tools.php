@@ -39,6 +39,7 @@ class Tools extends PanelController
             'values'  => Settings::all(),
             'hasLogo' => School::logoPath() !== null,
             'hasTtd'  => School::ttdPath() !== null,
+            'hasLogo2' => School::logo2Path() !== null,
             'admins'  => $db->table('admins')->select('id, username, nama, role, aktif, last_login')->orderBy('role')->orderBy('username')->get()->getResultArray(),
             'meId'    => (int) session()->get('admin_id'),
             'logs'    => $db->table('activity_log')->orderBy('id', 'DESC')->limit(300)->get()->getResultArray(),
@@ -63,7 +64,7 @@ class Tools extends PanelController
 
         $pesan = ['sekolah' => 'Info sekolah disimpan.', 'kegiatan' => 'Info kegiatan disimpan.', 'panel' => 'Pengaturan panel disimpan.'][$bagian];
         if ($bagian === 'sekolah') {
-            foreach (['logo' => 'Logo', 'ttd' => 'Tanda tangan'] as $jenis => $label) {
+            foreach (['logo' => 'Logo sekolah', 'logo2' => 'Logo kanan kartu', 'ttd' => 'Tanda tangan'] as $jenis => $label) {
                 $hasil = $this->unggahGambar($jenis);
                 if ($hasil === false) {
                     return redirect()->to(site_url('tools#sekolah'))->with('error', 'Info sekolah disimpan, tetapi ' . strtolower($label) . ' ditolak: harus PNG atau JPG, maksimal 1 MB.');
@@ -87,7 +88,7 @@ class Tools extends PanelController
             if (! in_array($type, ['image/png', 'image/jpeg'], true) || $file->getSize() > 1024 * 1024) {
                 return false;
             }
-            $jenis === 'logo' ? School::removeLogo() : School::removeTtd();
+            School::hapusGambar($jenis);
             $name = $jenis . '.' . ($type === 'image/png' ? 'png' : 'jpg');
             $file->move(School::UPLOAD_DIR, $name, true);
             Settings::set($jenis . '_file', $name);
@@ -95,7 +96,7 @@ class Tools extends PanelController
             return 'disimpan';
         }
         if ($this->request->getPost('hapus_' . $jenis)) {
-            $jenis === 'logo' ? School::removeLogo() : School::removeTtd();
+            School::hapusGambar($jenis);
 
             return 'dihapus';
         }
@@ -106,7 +107,7 @@ class Tools extends PanelController
     /** Pratinjau logo / tanda tangan di halaman Tools. */
     public function gambar(string $jenis)
     {
-        $path = $jenis === 'ttd' ? School::ttdPath() : School::logoPath();
+        $path = match ($jenis) { 'ttd' => School::ttdPath(), 'logo2' => School::logo2Path(), default => School::logoPath() };
         if ($path === null) {
             return $this->response->setStatusCode(404);
         }
