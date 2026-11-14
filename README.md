@@ -96,6 +96,13 @@ mariadb cbtadmin < cbtadmin_backup_YYYYMMDD_HHMMSS.sql
   timer di **Setting → Setting Token** dan memasang token di quiz yang baru dibuat. Mematikan token
   mengosongkan password semua quiz di tes aktif.
 
+## Plugin Moodle (`moodle/local/`)
+
+`local_cbtidentitas` menampilkan nama dan kelas siswa (field *department*, atau nama belakang bila
+kosong) di bawah judul halaman Daftar Ujian. Pasang di **kedua** server dengan menyalin foldernya ke
+`/var/www/moodle/public/local/`, lalu di server utama jalankan
+`sudo -u www-data php /var/www/moodle/admin/cli/upgrade.php --non-interactive`.
+
 ## Server utama + cadangan (`deploy/ha/`)
 
 Dua VPS, masing-masing dengan alamatnya sendiri di Cloudflare (mis. `utama.sekolah.sch.id` dan
