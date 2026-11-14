@@ -260,4 +260,8 @@ echo "  Admin user  : $ADMIN_USER"
 echo "  Admin pass  : $ADMIN_PASS"
 echo "  Cek halaman login: HTTP $HTTP_CODE (200 = normal)"
 echo "  Data login tersimpan di $CRED_FILE"
+echo
+echo "  Berikutnya, dari komputer admin (Git Bash, folder cbtadmin):"
+echo "    bash deploy/setelan-moodle.sh <host-ssh>   # setelan ujian CBT"
+echo "    bash deploy/deploy.sh <host-ssh>           # CBT Admin"
 echo "============================================================"

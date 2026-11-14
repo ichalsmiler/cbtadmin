@@ -1,0 +1,7 @@
+<?php
+// Kustomisasi CBT (dipasang oleh deploy/setelan-moodle.sh ke lang/id_local dan lang/en_local).
+// Menu Kursusku menjadi Daftar Ujian.
+$string['mycourses'] = 'Daftar Ujian';
+// Sapaan setelah login hanya nama (first name) dan kelas (last name).
+$string['welcomeback'] = '{$a->firstname} - {$a->lastname}';
+$string['welcometosite'] = '{$a->firstname} - {$a->lastname}';

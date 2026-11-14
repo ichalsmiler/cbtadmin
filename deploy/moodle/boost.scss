@@ -1,0 +1,35 @@
+/* CBT: menu atas hanya Daftar Ujian (Beranda disembunyikan) */
+.primary-navigation [data-key="home"],
+#theme_boost-drawers-primary a[href$="?redirect=0"] { display: none !important; }
+
+/* CBT: tanpa judul Ikhtisar kursus */
+.block_myoverview .card-title { display: none !important; }
+
+/* CBT: tanpa nama situs di menu atas */
+.navbar a.navbar-brand,
+#theme_boost-drawers-primary [data-region="site-home-link"] { display: none !important; }
+
+/* CBT: tanpa filter, cari, urutan, dan tampilan di Daftar Ujian */
+.block_myoverview [data-region="filter"] { display: none !important; }
+
+/* CBT: tanpa menu aksi (titik tiga) di kartu Daftar Ujian */
+.block_myoverview .coursemenubtn,
+.block_myoverview .coursemenubtn + .dropdown-menu { display: none !important; }
+
+/* CBT: menu profil hanya Daftar Ujian dan Keluar */
+#user-action-menu a.dropdown-item[href$="/user/preferences.php"],
+#user-action-menu .dropdown-divider { display: none !important; }
+
+/* CBT: tanpa tombol tanda tanya (?) di kanan bawah */
+#page-footer [data-region="footer-container-popover"] { display: none !important; }
+
+/* CBT: baris sapaan kosong tidak meninggalkan celah */
+#page-header .mb-2:has(> span.h2:empty) { display: none !important; }
+
+/* CBT: tanpa ikon notifikasi (lonceng) */
+#nav-notification-popover-container { display: none !important; }
+
+/* CBT: halaman login tanpa Lupa kata sandi dan Cookies notice */
+.login-form-forgotpassword,
+.login-container .login-divider,
+.login-container button[data-modal-title-str*="cookiesenabled"] { display: none !important; }

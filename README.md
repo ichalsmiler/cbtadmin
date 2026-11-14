@@ -25,6 +25,40 @@ dan `vendor/` diunduh di server oleh `deploy/install.sh`.
   `public/assets/vendor/` di server supaya panel jalan tanpa internet.
 - `deploy/install.sh` — pemasang di server (dijalankan sebagai root).
 - `deploy/deploy.sh` — kirim kode dari komputer ini lalu jalankan pemasang.
+- `deploy/install-moodle.sh` — pasang Moodle baru (Nginx, PHP-FPM, MariaDB, Redis).
+- `deploy/setelan-moodle.sh` + `deploy/moodle/` — setelan Moodle untuk ujian (lihat di bawah).
+- `moodle/local/` — plugin Moodle, dipasang oleh `setelan-moodle.sh`.
+- `deploy/ha/` — server utama + cadangan.
+
+## Server baru dari nol
+
+```bash
+# di server baru (root):  WWWROOT=https://alamat.sekolah.sch.id bash install-moodle.sh
+bash deploy/setelan-moodle.sh <host-ssh>   # dari komputer ini: setelan ujian CBT di Moodle
+bash deploy/deploy.sh <host-ssh>           # CBT Admin
+```
+
+## Setelan Moodle (`deploy/setelan-moodle.sh`)
+
+Memasang semua setelan Moodle yang dipakai untuk ujian, sekali jalan dan aman diulang
+(hanya yang berbeda yang diubah; setiap perubahan dicetak). Isinya ada di `deploy/moodle/`:
+
+- `setelan.php` — Bahasa Indonesia; wajib login, tanpa tamu dan daftar mandiri; satu akun satu
+  perangkat; tanpa kebijakan kata sandi; siswa tidak bisa mengubah profil/kata sandi dan tidak
+  bisa mengirim pesan; tanpa Dasbor, blog, komentar, catatan, lencana, tour, dan blok kalender /
+  timeline / online users; menu profil hanya Daftar Ujian + Keluar; setelah login langsung ke
+  Daftar Ujian; course baru = Single activity + Quiz tanpa tanggal selesai; quiz 1 percobaan
+  (dikunci), autosubmit, autosave 60 detik, tanpa kunci jawaban di tinjauan; guru/manager tidak
+  bisa membuat override atau menghapus attempt.
+- `boost.scss` — CSS tema Boost (menyembunyikan Beranda, nama situs, filter, tombol ?, lonceng,
+  Lupa kata sandi, Cookies notice, dll.). Dipasang di antara penanda `CBT MULAI`/`CBT SELESAI`;
+  SCSS lain di luar penanda dibiarkan.
+- `lang/` — teks kustom: Kursusku → Daftar Ujian, sapaan "nama - kelas", pesan sesi berakhir.
+
+Plugin di `moodle/local/` ikut disalin dan dipasang. Di server cadangan HA hanya kode plugin yang
+disalin, karena setelan ikut tersalin dari server utama. Untuk mengubah setelan, ubah berkas di
+`deploy/moodle/` lalu jalankan skrip ini lagi; perubahan lewat Site administration akan
+dikembalikan saat skrip dijalankan ulang.
 
 ## Pemasangan
 
