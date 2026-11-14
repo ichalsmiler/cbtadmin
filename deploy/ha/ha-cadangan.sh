@@ -6,7 +6,8 @@
 #    - Replikasi MariaDB (database moodle dan cbtadmin), jeda biasanya < 1 detik
 #    - Salin moodledata dan upload CBT Admin tiap menit
 #    - Backup: database tiap 15 menit di jam ujian, penuh tiap malam
-#  dan memindahkan ujian ke server ini saat server utama rusak.
+#    - Alamat https://DOMAIN_CADANGAN menampilkan "server cadangan, belum aktif"
+#  dan membuka ujian di server ini (alamat cadangan) saat server utama rusak.
 #
 #  Syarat: Moodle (install-moodle.sh) dan CBT Admin sudah terpasang dengan
 #          versi yang sama seperti server utama; ha-utama.sh pasang sudah
@@ -15,7 +16,7 @@
 #  Pakai (sebagai root):
 #    bash ha-cadangan.sh pasang     # sekali; data server ini DIGANTI data utama
 #    bash ha-cadangan.sh status     # cek replikasi, salinan file, backup
-#    bash ha-cadangan.sh pindah     # server utama rusak: jadikan server ini utama
+#    bash ha-cadangan.sh pindah     # server utama rusak: buka ujian di server ini
 # =============================================================================
 set -euo pipefail
 
@@ -42,7 +43,7 @@ load_conf() {
     # shellcheck disable=SC1090
     . "$src"
     local v
-    for v in DOMAIN UTAMA_IP CADANGAN_IP HA_SECRET; do
+    for v in DOMAIN_UTAMA DOMAIN_CADANGAN UTAMA_IP CADANGAN_IP HA_SECRET; do
         [ -n "${!v:-}" ] || die "$v di ha.conf belum diisi."
     done
     [ "${#HA_SECRET}" -ge 32 ] || die "HA_SECRET terlalu pendek. Buat dengan: openssl rand -hex 32"
@@ -101,8 +102,41 @@ EOF
     systemctl daemon-reload
 }
 
+# Mode situs: "aktif" melayani ujian; "cadangan" menampilkan halaman "server cadangan, belum aktif"
+# (database cadangan hanya-baca, jadi login di sana pasti gagal).
+set_site_mode() {
+    local mode="$1" snip=/etc/nginx/snippets/cbt-ha-mode.conf
+    mkdir -p /var/www/cbt-ha /etc/nginx/snippets
+    cat > /var/www/cbt-ha/cbt-cadangan.html <<'EOF'
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server cadangan</title>
+<style>body{font-family:system-ui,sans-serif;background:#f1f3f7;color:#2a2e3d;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
+main{background:#fff;border-radius:12px;padding:32px;max-width:420px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 .5rem}</style>
+</head><body><main><h1>Server cadangan</h1>
+<p>Server ini menyimpan salinan data ujian dan belum aktif. Silakan kerjakan ujian di alamat server utama.</p></main></body></html>
+EOF
+    if [ "$mode" = cadangan ]; then
+        cat > "$snip" <<'EOF'
+# CBT HA: server cadangan belum aktif (dibuat oleh skrip ha)
+error_page 503 /cbt-cadangan.html;
+location = /cbt-cadangan.html { root /var/www/cbt-ha; internal; }
+if ($uri != /cbt-cadangan.html) { return 503; }
+EOF
+    else
+        echo "# CBT HA: server aktif melayani ujian (dibuat oleh skrip ha)" > "$snip"
+    fi
+    local site=/etc/nginx/sites-available/moodle
+    if ! grep -q "snippets/cbt-ha-mode.conf" "$site"; then
+        sed -i "0,/server_name _;/s##server_name _;\\n    include snippets/cbt-ha-mode.conf;#" "$site"
+    fi
+    nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
+    systemctl reload nginx
+}
+
 setup_web() {
-    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat https://$DOMAIN"
+    local domain="$1"
+    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli; alamat https://$domain"
     [ -s "$SSL_DIR/origin.pem" ] && [ -s "$SSL_DIR/origin.key" ] || die "Sertifikat Cloudflare Origin belum ada.
   Salin file yang SAMA dengan server utama ke:
     $SSL_DIR/origin.pem   (Origin Certificate)
@@ -130,7 +164,7 @@ setup_web() {
     nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
     systemctl reload nginx
 
-    local url="https://$DOMAIN" pat
+    local url="https://$domain" pat
     pat='^([$]CFG->wwwroot[[:space:]]*=).*'
     sed -i -E "s#$pat#\\1 '$url';#" "$CONFIG"
     php -l "$CONFIG" >/dev/null || die "config.php rusak setelah alamat diganti."
@@ -209,7 +243,8 @@ EOF
 pasang() {
     check_prereq
     load_conf
-    echo "Server ini disiapkan sebagai CADANGAN ($CADANGAN_IP). Utama: $UTAMA_IP. Domain: $DOMAIN"
+    echo "Server ini disiapkan sebagai CADANGAN: https://$DOMAIN_CADANGAN ($CADANGAN_IP)."
+    echo "Utama: https://$DOMAIN_UTAMA ($UTAMA_IP)."
     warn "Database moodle dan cbtadmin di server INI akan DIHAPUS lalu diganti salinan dari server utama."
     confirm "YA"
 
@@ -223,7 +258,8 @@ pasang() {
         sleep 2
     done
     echo "Server utama terjangkau lewat WireGuard."
-    setup_web
+    setup_web "$DOMAIN_CADANGAN"
+    set_site_mode cadangan
 
     log "Peran server: cadangan (cron Moodle dan token dimatikan di sini)"
     echo "$PERAN" > "$ROLE_FILE"; chmod 644 "$ROLE_FILE"
@@ -357,6 +393,12 @@ status() {
         echo "Replikasi tidak aktif (server ini bukan cadangan, atau belum dipasang)."
     fi
     echo
+    echo "--- Bandingkan data ujian (utama vs cadangan)"
+    local q="SELECT CONCAT((SELECT COUNT(*) FROM moodle.mdl_quiz_attempts), ' attempt quiz, ',
+                           (SELECT COUNT(*) FROM moodle.mdl_question_attempt_steps), ' langkah jawaban')"
+    printf 'Utama    : %s\n' "$(mariadb --defaults-extra-file="$HA_DIR/repl.cnf" -N -e "$q" 2>/dev/null || echo 'tidak terjangkau')"
+    printf 'Cadangan : %s\n' "$(mariadb -N -e "$q" 2>/dev/null || echo 'tidak terbaca')"
+    echo
     echo "--- Salinan file"
     if [ -f "$HA_DIR/sync-terakhir" ]; then
         echo "Terakhir disalin $(( $(date +%s) - $(cat "$HA_DIR/sync-terakhir") )) detik lalu"
@@ -372,44 +414,20 @@ status() {
 }
 
 # ----------------------------------------------------------------- pindah
-cloudflare_switch() {
-    local ip="$1" api resp id
-    if [ -z "${CF_API_TOKEN:-}" ] || [ -z "${CF_ZONE_ID:-}" ]; then
-        warn "CF_API_TOKEN/CF_ZONE_ID kosong. Ganti manual: Cloudflare > DNS > $DOMAIN > IP $ip (Proxied)."
-        return
-    fi
-    api="https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/dns_records"
-    printf 'Authorization: Bearer %s\n' "$CF_API_TOKEN" > "$HA_DIR/cf.hdr"; chmod 600 "$HA_DIR/cf.hdr"
-    if ! resp="$(curl -fsS -H @"$HA_DIR/cf.hdr" "$api?type=A&name=$DOMAIN")"; then
-        warn "Cloudflare tidak bisa dihubungi. Ganti manual: DNS $DOMAIN -> $ip."; return
-    fi
-    id="$(printf '%s' "$resp" | php -r '$r = json_decode(stream_get_contents(STDIN), true); echo $r["result"][0]["id"] ?? "";')"
-    if [ -z "$id" ]; then
-        warn "Record A untuk $DOMAIN tidak ditemukan di Cloudflare. Ganti manual: DNS $DOMAIN -> $ip."; return
-    fi
-    if resp="$(curl -fsS -X PATCH -H @"$HA_DIR/cf.hdr" -H "Content-Type: application/json" \
-            --data "{\"content\":\"$ip\",\"proxied\":true}" "$api/$id")" \
-       && printf '%s' "$resp" | php -r 'exit(json_decode(stream_get_contents(STDIN), true)["success"] ?? false ? 0 : 1);'; then
-        echo "Cloudflare: $DOMAIN sekarang mengarah ke $ip."
-    else
-        warn "Cloudflare menolak perubahan DNS. Ganti manual: DNS $DOMAIN -> $ip."
-    fi
-}
-
 pindah() {
     load_conf
     [ "$(cat "$ROLE_FILE" 2>/dev/null)" = cadangan ] || die "Server ini bukan cadangan."
-    echo "Server ini ($CADANGAN_IP) akan dijadikan SERVER UTAMA dan domain $DOMAIN dipindah ke sini."
+    echo "Server ini (https://$DOMAIN_CADANGAN) akan dijadikan SERVER UTAMA."
     if ping -c1 -W2 "$PEER_WG_IP" >/dev/null 2>&1; then
-        warn "Server utama MASIH terhubung. Pastikan server utama benar-benar dimatikan atau tidak dipakai lagi;
-  kalau dua server sama-sama menerima jawaban, datanya bercabang."
+        warn "Server utama MASIH terhubung. Matikan server utama (atau hapus DNS $DOMAIN_UTAMA di Cloudflare)
+  supaya siswa tidak lagi mengerjakan di sana; kalau dua server sama-sama menerima jawaban, datanya bercabang."
     fi
     confirm "PINDAH"
 
-    log "1/5 Salin file terakhir dari server utama (bila masih bisa)"
+    log "1/4 Salin file terakhir dari server utama (bila masih bisa)"
     timeout 120 /usr/local/sbin/cbt-sync || warn "Server utama tidak terjangkau; memakai salinan file terakhir."
 
-    log "2/5 Terapkan sisa data replikasi"
+    log "2/4 Terapkan sisa data replikasi"
     mariadb -e "STOP SLAVE IO_THREAD;" 2>/dev/null || true
     local i state
     for i in $(seq 1 60); do
@@ -419,11 +437,11 @@ pindah() {
     done
     echo "Posisi data: $(mariadb -N -e 'SELECT @@gtid_slave_pos')"
 
-    log "3/5 Database dibuka untuk menulis"
+    log "3/4 Database dibuka untuk menulis"
     mariadb -e "STOP SLAVE; RESET SLAVE ALL; SET GLOBAL read_only = 0;"
     sed -i 's/^read_only = 1/read_only = 0/' "$DB_CNF"
 
-    log "4/5 Moodle dan CBT Admin dijalankan penuh di server ini"
+    log "4/4 Moodle dan CBT Admin dibuka untuk siswa di server ini"
     echo "utama" > "$ROLE_FILE"
     local f
     for f in moodle cbtadmin; do
@@ -431,19 +449,18 @@ pindah() {
     done
     runuser -u www-data -- php "$MOODLE_DIR/admin/cli/purge_caches.php"
     systemctl reload "php$(php -r 'echo PHP_MAJOR_VERSION.".".PHP_MINOR_VERSION;')-fpm"
-
-    log "5/5 Domain dipindah ke server ini"
-    cloudflare_switch "$CADANGAN_IP"
+    set_site_mode aktif
 
     echo
     echo "============================================================"
-    echo "  SERVER INI SEKARANG UTAMA: https://$DOMAIN"
-    echo "  Siswa cukup memuat ulang halaman, login lagi, lalu lanjutkan quiz."
+    echo "  SERVER INI SEKARANG UTAMA"
+    echo "  Umumkan ke siswa alamat baru:  https://$DOMAIN_CADANGAN"
+    echo "  Siswa login lagi lalu melanjutkan quiz; jawaban tersimpan."
     echo
     echo "  JANGAN hidupkan server lama sebagai utama lagi. Untuk menjadikannya"
-    echo "  cadangan baru: tukar UTAMA_IP dan CADANGAN_IP di ha.conf KEDUA server,"
-    echo "  lalu jalankan  ha-utama.sh pasang  di server ini dan"
-    echo "  ha-cadangan.sh pasang  di server lama."
+    echo "  cadangan baru: di ha.conf KEDUA server tukar UTAMA_IP <-> CADANGAN_IP"
+    echo "  dan DOMAIN_UTAMA <-> DOMAIN_CADANGAN, lalu jalankan"
+    echo "  ha-utama.sh pasang  di server ini dan  ha-cadangan.sh pasang  di server lama."
     echo "============================================================"
 }
 

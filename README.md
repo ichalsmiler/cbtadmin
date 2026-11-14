@@ -98,17 +98,20 @@ mariadb cbtadmin < cbtadmin_backup_YYYYMMDD_HHMMSS.sql
 
 ## Server utama + cadangan (`deploy/ha/`)
 
-Dua VPS dengan satu domain di Cloudflare. Server utama melayani ujian; server cadangan terus menyalin
-database (replikasi MariaDB, jeda biasanya di bawah 1 detik) dan file Moodle (tiap menit), lewat jalur
-WireGuard pribadi. Bila server utama rusak, satu perintah memindahkan ujian ke server cadangan.
+Dua VPS, masing-masing dengan alamatnya sendiri di Cloudflare (mis. `utama.sekolah.sch.id` dan
+`cadangan.sekolah.sch.id`). Siswa mengerjakan di alamat utama; server cadangan terus menyalin database
+(replikasi MariaDB, jeda biasanya di bawah 1 detik) dan file Moodle (tiap menit) lewat jalur WireGuard
+pribadi. Selama belum dipakai, alamat cadangan menampilkan halaman "Server cadangan, belum aktif".
+Bila server utama rusak, satu perintah membuka ujian di alamat cadangan.
 
 Persiapan di **kedua** VPS (Debian 12/13):
 
-1. Pasang Moodle dengan alamat domain: `WWWROOT=https://cbt.sekolah.sch.id bash deploy/install-moodle.sh`,
-   lalu CBT Admin (`deploy/deploy.sh`). Versi Moodle kedua server harus sama.
-2. Cloudflare: record A domain → IP server utama, **Proxied**; SSL/TLS mode **Full (strict)**;
-   buat Origin Certificate dan simpan di kedua server sebagai `/etc/ssl/cbt/origin.pem` dan
-   `/etc/ssl/cbt/origin.key`.
+1. Pasang Moodle dengan alamat server itu sendiri, mis. di cadangan
+   `WWWROOT=https://cadangan.sekolah.sch.id bash deploy/install-moodle.sh`, lalu CBT Admin
+   (`deploy/deploy.sh`). Versi Moodle kedua server harus sama.
+2. Cloudflare: record A `utama` → IP server utama dan `cadangan` → IP server cadangan, keduanya
+   **Proxied**; SSL/TLS mode **Full (strict)**; buat satu Origin Certificate untuk kedua alamat dan simpan
+   di kedua server sebagai `/etc/ssl/cbt/origin.pem` dan `/etc/ssl/cbt/origin.key`.
 3. Buka port **UDP 51820** di firewall penyedia VPS (untuk WireGuard).
 4. Salin `deploy/ha/` ke kedua server, salin `ha.conf.contoh` menjadi `ha.conf`, isi, dan pastikan
    isinya sama persis di kedua server (`HA_SECRET` dibuat sekali dengan `openssl rand -hex 32`).
@@ -120,7 +123,8 @@ bash ha-utama.sh pasang       # di server utama
 bash ha-cadangan.sh pasang    # di server cadangan (data cadangan diganti salinan utama)
 ```
 
-Sehari-hari: `bash ha-cadangan.sh status` (jeda replikasi, salinan file terakhir, backup terbaru).
+Sehari-hari: `bash ha-cadangan.sh status` (jeda replikasi, jumlah attempt dan jawaban di kedua server,
+salinan file terakhir, backup terbaru).
 Backup ada di server cadangan, `/var/backups/cbt`: database tiap 15 menit pada jam ujian, backup penuh
 (database + moodledata) tiap 01:30, disimpan 7 hari.
 
@@ -130,11 +134,12 @@ Bila server utama rusak, di server cadangan:
 bash ha-cadangan.sh pindah
 ```
 
-Database dibuka untuk menulis, cron Moodle dan token dinyalakan, dan domain di Cloudflare dipindah ke
-server cadangan (bila `CF_API_TOKEN` dan `CF_ZONE_ID` diisi; kalau tidak, ganti IP manual). Siswa memuat
-ulang halaman, login lagi, dan melanjutkan quiz. Jangan hidupkan server lama sebagai utama; untuk
-menjadikannya cadangan baru, tukar `UTAMA_IP` dan `CADANGAN_IP` di `ha.conf` kedua server lalu jalankan
-`ha-utama.sh pasang` di server yang sekarang utama dan `ha-cadangan.sh pasang` di server lama.
+Database dibuka untuk menulis, cron Moodle dan token dinyalakan, dan alamat cadangan mulai melayani
+ujian. Umumkan alamat cadangan ke siswa; mereka login lagi dan melanjutkan quiz. Matikan server lama
+(atau hapus DNS alamat utama) supaya tidak ada siswa yang masih mengerjakan di sana. Untuk menjadikan
+server lama cadangan baru, di `ha.conf` kedua server tukar `UTAMA_IP` ↔ `CADANGAN_IP` dan
+`DOMAIN_UTAMA` ↔ `DOMAIN_CADANGAN`, lalu jalankan `ha-utama.sh pasang` di server yang sekarang utama dan
+`ha-cadangan.sh pasang` di server lama.
 
 ## Catatan teknis
 

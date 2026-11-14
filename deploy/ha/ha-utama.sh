@@ -7,7 +7,7 @@
 #    - MariaDB: binlog + user replikasi untuk server cadangan
 #    - rsync: sumber salinan moodledata dan upload CBT Admin
 #    - Nginx: HTTPS dengan sertifikat Cloudflare Origin + IP asli siswa
-#    - Moodle: alamat https://DOMAIN, autosave quiz tiap 60 detik
+#    - Moodle: alamat https://DOMAIN_UTAMA, autosave quiz tiap 60 detik
 #
 #  Syarat: Moodle (install-moodle.sh) dan CBT Admin sudah terpasang,
 #          ha.conf sudah diisi, sertifikat Cloudflare Origin sudah disalin.
@@ -39,7 +39,7 @@ load_conf() {
     # shellcheck disable=SC1090
     . "$src"
     local v
-    for v in DOMAIN UTAMA_IP CADANGAN_IP HA_SECRET; do
+    for v in DOMAIN_UTAMA DOMAIN_CADANGAN UTAMA_IP CADANGAN_IP HA_SECRET; do
         [ -n "${!v:-}" ] || die "$v di ha.conf belum diisi."
     done
     [ "${#HA_SECRET}" -ge 32 ] || die "HA_SECRET terlalu pendek. Buat dengan: openssl rand -hex 32"
@@ -97,8 +97,41 @@ EOF
     systemctl daemon-reload
 }
 
+# Mode situs: "aktif" melayani ujian; "cadangan" menampilkan halaman "server cadangan, belum aktif"
+# (database cadangan hanya-baca, jadi login di sana pasti gagal).
+set_site_mode() {
+    local mode="$1" snip=/etc/nginx/snippets/cbt-ha-mode.conf
+    mkdir -p /var/www/cbt-ha /etc/nginx/snippets
+    cat > /var/www/cbt-ha/cbt-cadangan.html <<'EOF'
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server cadangan</title>
+<style>body{font-family:system-ui,sans-serif;background:#f1f3f7;color:#2a2e3d;display:grid;place-items:center;min-height:100vh;margin:0;padding:16px}
+main{background:#fff;border-radius:12px;padding:32px;max-width:420px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 .5rem}</style>
+</head><body><main><h1>Server cadangan</h1>
+<p>Server ini menyimpan salinan data ujian dan belum aktif. Silakan kerjakan ujian di alamat server utama.</p></main></body></html>
+EOF
+    if [ "$mode" = cadangan ]; then
+        cat > "$snip" <<'EOF'
+# CBT HA: server cadangan belum aktif (dibuat oleh skrip ha)
+error_page 503 /cbt-cadangan.html;
+location = /cbt-cadangan.html { root /var/www/cbt-ha; internal; }
+if ($uri != /cbt-cadangan.html) { return 503; }
+EOF
+    else
+        echo "# CBT HA: server aktif melayani ujian (dibuat oleh skrip ha)" > "$snip"
+    fi
+    local site=/etc/nginx/sites-available/moodle
+    if ! grep -q "snippets/cbt-ha-mode.conf" "$site"; then
+        sed -i "0,/server_name _;/s##server_name _;\\n    include snippets/cbt-ha-mode.conf;#" "$site"
+    fi
+    nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
+    systemctl reload nginx
+}
+
 setup_web() {
-    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat https://$DOMAIN"
+    local domain="$1"
+    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat https://$domain"
     [ -s "$SSL_DIR/origin.pem" ] && [ -s "$SSL_DIR/origin.key" ] || die "Sertifikat Cloudflare Origin belum ada.
   Buat di Cloudflare > SSL/TLS > Origin Server > Create Certificate, lalu simpan:
     $SSL_DIR/origin.pem   (Origin Certificate)
@@ -127,7 +160,7 @@ setup_web() {
     nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
     systemctl reload nginx
 
-    local url="https://$DOMAIN" pat
+    local url="https://$domain" pat
     pat='^([$]CFG->wwwroot[[:space:]]*=).*'
     sed -i -E "s#$pat#\\1 '$url';#" "$CONFIG"
     php -l "$CONFIG" >/dev/null || die "config.php rusak setelah alamat diganti."
@@ -140,10 +173,12 @@ mdl_cfg() { runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" "$@"; }
 pasang() {
     check_prereq
     load_conf
-    echo "Server ini disiapkan sebagai UTAMA ($UTAMA_IP). Cadangan: $CADANGAN_IP. Domain: $DOMAIN"
+    echo "Server ini disiapkan sebagai UTAMA: https://$DOMAIN_UTAMA ($UTAMA_IP)."
+    echo "Cadangan: https://$DOMAIN_CADANGAN ($CADANGAN_IP)."
 
     setup_wireguard "$CADANGAN_IP"
-    setup_web
+    setup_web "$DOMAIN_UTAMA"
+    set_site_mode aktif
 
     log "MariaDB: binlog untuk replikasi ke cadangan"
     cat > "$DB_CNF" <<EOF
@@ -213,7 +248,7 @@ EOF
     echo
     echo "============================================================"
     echo "  SERVER UTAMA SIAP"
-    echo "  Alamat ujian : https://$DOMAIN  (arahkan DNS Cloudflare ke $UTAMA_IP, Proxied)"
+    echo "  Alamat ujian : https://$DOMAIN_UTAMA  (DNS Cloudflare -> $UTAMA_IP, Proxied)"
     echo "  Berikutnya   : jalankan  bash ha-cadangan.sh pasang  di $CADANGAN_IP"
     echo "  Pastikan port UDP $WG_PORT terbuka di firewall penyedia VPS kedua server."
     echo "============================================================"
