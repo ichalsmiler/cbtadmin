@@ -47,7 +47,7 @@
                 <?php $diblokir = $r['diblokir_at'] !== null; ?>
                 <tr>
                     <td><?= esc($r['nomor_peserta'] ?: '–') ?></td>
-                    <td><?= esc($r['nama']) ?><div class="small text-muted"><?= esc($r['username']) ?></div></td>
+                    <td><?= esc($r['nama']) ?></td>
                     <td><?= esc($r['kelas']) ?></td>
                     <?php if ($isAdmin): ?><td><?= esc($r['ruang_nama'] ?? '-') ?></td><?php endif ?>
                     <td data-order="<?= $diblokir ? 0 : 1 ?>">

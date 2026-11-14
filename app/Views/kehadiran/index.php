@@ -42,7 +42,7 @@ $sudah = count(array_filter($rows, static fn ($r) => $r['status'] !== null));
                             <?php $pid = (int) $r['id']; ?>
                             <tr>
                                 <td><?= esc($r['nomor_peserta'] ?: '–') ?></td>
-                                <td><?= esc($r['nama']) ?><div class="small text-muted"><?= esc($r['username']) ?></div></td>
+                                <td><?= esc($r['nama']) ?></td>
                                 <td><?= esc($r['kelas']) ?></td>
                                 <td class="text-center text-nowrap">
                                     <div class="btn-group btn-group-sm" role="group" aria-label="Kehadiran <?= esc($r['nama'], 'attr') ?>">
