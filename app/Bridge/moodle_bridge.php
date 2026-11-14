@@ -290,6 +290,31 @@ try {
             }
             break;
 
+        case 'suspend_users':
+            // Blokir (suspend) atau buka blokir akun siswa; yang diblokir langsung dikeluarkan.
+            $suspend = ! empty($in['suspend']);
+            foreach ($in['userids'] as $userid) {
+                $item = ['userid' => (int) $userid];
+                try {
+                    $user = $DB->get_record('user', ['id' => (int) $userid, 'deleted' => 0], '*', MUST_EXIST);
+                    if (is_siteadmin($user) || isguestuser($user)) {
+                        throw new RuntimeException('Akun admin tidak diblokir dari panel.');
+                    }
+                    if ((int) $user->suspended !== (int) $suspend) {
+                        $user->suspended = (int) $suspend;
+                        user_update_user($user, false, true);
+                    }
+                    if ($suspend) {
+                        \core\session\manager::destroy_user_sessions((int) $userid);
+                    }
+                    $item['status'] = $suspend ? 'diblokir' : 'dibuka';
+                } catch (Throwable $e) {
+                    $item['error'] = cbt_clean_error($e->getMessage());
+                }
+                $result['items'][] = $item;
+            }
+            break;
+
         case 'session_gc':
             // Hapus sesi Moodle yang sudah melewati batas waktu sesi situs.
             \core\session\manager::gc();

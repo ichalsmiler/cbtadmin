@@ -66,6 +66,11 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('dokumen/cetak_doc', 'Dokumen::cetak');
     $routes->get('dokumen/cetak_doc/kartu', 'Dokumen::kartu');
     $routes->get('dokumen/cetak_doc/daftar_hadir', 'Dokumen::daftarHadir');
+    $routes->get('kehadiran', 'Kehadiran::index');
+    $routes->post('kehadiran/simpan', 'Kehadiran::simpan');
+    $routes->get('dokumen/absensi', 'Kehadiran::rekap');
+    $routes->post('dokumen/absensi/buka', 'Kehadiran::buka');
+    $routes->get('dokumen/absensi/export', 'Kehadiran::export');
     $routes->get('dokumen/laporan_kehadiran', 'Dokumen::kehadiran');
     $routes->get('dokumen/laporan_kehadiran/export', 'Dokumen::kehadiranExport');
     $routes->get('dokumen/laporan_kehadiran/berita_acara', 'Dokumen::beritaAcara');

@@ -6,7 +6,7 @@ use App\Libraries\Settings;
 
 abstract class PanelController extends BaseController
 {
-    public const VERSION = '1.3.0';
+    public const VERSION = '1.4.0';
 
     protected $helpers = ['url', 'form'];
 

@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Libraries\Absensi;
 use App\Libraries\ActiveTest;
 use App\Libraries\ActivityLog;
 use CodeIgniter\CLI\BaseCommand;
@@ -22,6 +23,17 @@ class TokenCron extends BaseCommand
         // Server cadangan (deploy/ha) hanya menyalin data; token diurus server utama.
         if (trim((string) @file_get_contents('/etc/cbt-ha-peran')) === 'cadangan') {
             return EXIT_SUCCESS;
+        }
+
+        // Blokir siswa tidak hadir hanya berlaku sehari: buka blokir dari hari sebelumnya.
+        try {
+            $opened = Absensi::unblockPast();
+            if ($opened > 0) {
+                ActivityLog::add('buka_blokir_otomatis', $opened . ' siswa');
+                CLI::write($opened . ' blokir siswa dari hari sebelumnya dibuka.');
+            }
+        } catch (\Throwable $e) {
+            log_message('error', 'cbt:token absensi: ' . $e->getMessage());
         }
 
         try {

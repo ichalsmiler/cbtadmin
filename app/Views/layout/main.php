@@ -7,10 +7,11 @@ $menu = [
     ['Token', 'key', 'token'],
     ['Status Peserta', 'people', 'status_peserta'],
     ['Reset Login Peserta', 'person-x', 'reset_login'],
+    ['Laporan Kehadiran', 'clipboard-check', 'kehadiran'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
     ['Daftar Ruang', 'door-open', 'daftar_ruang'],
     ['Pengawas', 'person-badge', 'pengawas'],
-    ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
+    ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Absensi Ruang', 'dokumen/absensi'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
     ['Hasil Ujian', 'award', 'hasil_ujian'],
     ['Tools', 'gear', 'tools'],
     ['Keluar', 'box-arrow-right', 'logout'],
@@ -43,9 +44,9 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
     <ul class="nav flex-column">
         <?php foreach ($menu as $i => $item): ?>
             <?php
-            // Administrator: semua menu kecuali Token (sudah ada di Status Test).
-            // Pengawas: hanya menu yang boleh dibukanya.
-            if ($adminRole === 'admin' ? $item[2] === 'token' : ($item[2] === null || ! \App\Filters\Guard::allowed($adminRole, $item[2]))) {
+            // Administrator: semua menu kecuali Token (ada di Status Test) dan Laporan Kehadiran
+            // (rekapnya di Dokumen -> Absensi Ruang). Pengawas: hanya menu yang boleh dibukanya.
+            if ($adminRole === 'admin' ? in_array($item[2], ['token', 'kehadiran'], true) : ($item[2] === null || ! \App\Filters\Guard::allowed($adminRole, $item[2]))) {
                 continue;
             }
             ?>
