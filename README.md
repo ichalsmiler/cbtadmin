@@ -11,7 +11,7 @@ Dibangun dengan CodeIgniter 4 dan berjalan di server yang sama dengan Moodle.
 | Daftar Ruang (ruang dan sesi) | Selesai |
 | Daftar Peserta (Data CBTAdmin, Data Moodle, import/export Excel, buat user Moodle, reset password) | Selesai |
 | Tools (pengaturan, logo, akun admin/proktor, backup database panel, bersihkan sesi, log aktivitas) | Selesai |
-| Status Test (buka/tutup/atur waktu quiz), Status Peserta (paksa submit, tambah waktu, hapus attempt) | Selesai |
+| Status Test (tes = kategori kursus Moodle, buka/tutup mapel, token bersama dengan release otomatis, Reset Default, buka/tutup/atur waktu quiz), Status Peserta (paksa submit, tambah waktu, hapus attempt) | Selesai |
 | Reset Login Peserta (per peserta, massal, per ruang), No Attempt Check (export Excel) | Selesai |
 | Hasil Ujian (tabel, statistik, Excel, PDF), Dokumen (kartu peserta 8 per A4, daftar hadir, laporan kehadiran, berita acara PDF, Excel) | Selesai |
 
@@ -82,6 +82,17 @@ password, ruang, sesi, pengaturan, akun, log). Data Moodle tidak termasuk. Untuk
 ```bash
 mariadb cbtadmin < cbtadmin_backup_YYYYMMDD_HHMMSS.sql
 ```
+
+## Status Test dan token
+
+- **Daftar Tes** berisi kategori kursus Moodle. Kategori yang disimpan menjadi tes aktif; mata pelajaran
+  adalah kursus di kategori itu (termasuk subkategorinya).
+- **Matpel** membuka atau menyembunyikan kursus (minimal 1 tetap aktif). **Reset Default** membuka
+  kembali semua kursus di tes aktif, mis. untuk ujian susulan.
+- **Token** (6 huruf) dipasang sebagai password di semua quiz pada tes aktif. **Release** membuat token
+  baru seketika; cron `/etc/cron.d/cbtadmin` (`php spark cbt:token`, tiap menit) me-release token sesuai
+  timer di **Setting → Setting Token** dan memasang token di quiz yang baru dibuat. Mematikan token
+  mengosongkan password semua quiz di tes aktif.
 
 ## Catatan teknis
 

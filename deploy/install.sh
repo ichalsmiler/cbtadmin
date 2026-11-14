@@ -135,6 +135,13 @@ mkdir -p "$APP_DIR/webroot"
 ln -sfn ../public "$APP_DIR/webroot/cbtadmin"
 (cd "$APP_DIR" && runuser -u www-data -- php spark migrate --all)
 
+# Release token otomatis (menu Status Test): cek tiap menit.
+cat > /etc/cron.d/cbtadmin <<EOF
+# CBT Admin: release token otomatis dan pasang token di quiz tes aktif.
+* * * * * www-data cd $APP_DIR && flock -n /tmp/cbtadmin-token.lock php spark cbt:token >/dev/null 2>&1
+EOF
+chmod 644 /etc/cron.d/cbtadmin
+
 # ----------------------------- 6. Akun admin awal -----------------------------
 ADMIN_COUNT="$(mariadb -N "$PANEL_DB" -e 'SELECT COUNT(*) FROM admins')"
 if [ "$ADMIN_COUNT" -eq 0 ]; then

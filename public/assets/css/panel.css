@@ -83,3 +83,7 @@ body { background: var(--page-bg); color: var(--ink); font-size: .95rem; }
 .login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--navy); padding: 1rem; }
 .login-card { width: 100%; max-width: 360px; background: #fff; border-radius: .6rem; padding: 2rem 1.75rem; }
 .login-brand { font-weight: 700; letter-spacing: .06em; font-size: 1.25rem; text-align: center; margin-bottom: 1.5rem; color: var(--navy); }
+
+/* Status Test: kotak token */
+.token-box { letter-spacing: .35em; transition: background-color .6s; }
+.token-new { background-color: #d1f2dd !important; }

@@ -41,6 +41,12 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->post('daftar_peserta/moodle/reset_password', 'Peserta::resetPassword');
 
     $routes->get('status_tes', 'StatusTes::index');
+    $routes->get('status_tes/token', 'StatusTes::token');
+    $routes->post('status_tes/kategori', 'StatusTes::kategori');
+    $routes->post('status_tes/mapel', 'StatusTes::mapel');
+    $routes->post('status_tes/release', 'StatusTes::release');
+    $routes->post('status_tes/token_setting', 'StatusTes::tokenSetting');
+    $routes->post('status_tes/reset', 'StatusTes::reset');
     $routes->post('status_tes/waktu', 'StatusTes::waktu');
     $routes->get('status_peserta', 'StatusPeserta::index');
     $routes->post('status_peserta/aksi', 'StatusPeserta::aksi');

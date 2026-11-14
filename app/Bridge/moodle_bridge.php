@@ -251,6 +251,45 @@ try {
             }
             break;
 
+        case 'quiz_password':
+            // Pasang password (token) yang sama di banyak quiz sekaligus. Password kosong = tanpa token.
+            $password = (string) $in['password'];
+            $courses  = [];
+            foreach ($in['quizids'] as $quizid) {
+                $item = ['id' => (int) $quizid];
+                try {
+                    $quiz = $DB->get_record('quiz', ['id' => (int) $quizid], 'id, course', MUST_EXIST);
+                    $DB->update_record('quiz', (object) ['id' => $quiz->id, 'password' => $password, 'timemodified' => time()]);
+                    $courses[(int) $quiz->course] = true;
+                    $item['status'] = 'diubah';
+                } catch (Throwable $e) {
+                    $item['error'] = cbt_clean_error($e->getMessage());
+                }
+                $result['items'][] = $item;
+            }
+            foreach (array_keys($courses) as $courseid) {
+                rebuild_course_cache($courseid, true);
+            }
+            break;
+
+        case 'course_visibility':
+            // Tampilkan atau sembunyikan kursus (mata pelajaran) lewat fungsi Moodle.
+            require_once $CFG->dirroot . '/course/lib.php';
+            foreach ($in['courses'] as $c) {
+                $item = ['id' => (int) $c['id']];
+                try {
+                    if ((int) $c['id'] <= 1) {
+                        throw new RuntimeException('Halaman depan situs tidak bisa diubah.');
+                    }
+                    course_change_visibility((int) $c['id'], ! empty($c['visible']));
+                    $item['status'] = empty($c['visible']) ? 'disembunyikan' : 'ditampilkan';
+                } catch (Throwable $e) {
+                    $item['error'] = cbt_clean_error($e->getMessage());
+                }
+                $result['items'][] = $item;
+            }
+            break;
+
         case 'session_gc':
             // Hapus sesi Moodle yang sudah melewati batas waktu sesi situs.
             \core\session\manager::gc();

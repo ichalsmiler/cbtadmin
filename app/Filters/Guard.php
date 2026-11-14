@@ -52,7 +52,7 @@ class Guard implements FilterInterface
             return $this->deny($request, 'Sesi berakhir karena terlalu lama diam.');
         }
         // Permintaan auto-refresh tidak dihitung sebagai aktivitas.
-        if ($path !== 'dashboard/stats') {
+        if (! in_array($path, ['dashboard/stats', 'status_tes/token'], true)) {
             $session->set('last_seen', time());
         }
 

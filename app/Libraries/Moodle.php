@@ -43,22 +43,62 @@ class Moodle
         return rtrim((string) env('moodle.url', ''), '/') . $path;
     }
 
-    /** Daftar quiz beserta kursus dan modul kursusnya. */
-    public static function quizzes(): array
+    /**
+     * Daftar quiz beserta kursus dan modul kursusnya.
+     * Dengan $categoryId: hanya quiz di kategori itu dan subkategorinya.
+     */
+    public static function quizzes(?int $categoryId = null): array
     {
-        $q = self::t('quiz');
-        $c = self::t('course');
+        $q  = self::t('quiz');
+        $c  = self::t('course');
+        $cc = self::t('course_categories');
         $cm = self::t('course_modules');
-        $m = self::t('modules');
+        $m  = self::t('modules');
+
+        $where = '';
+        $binds = [];
+        if ($categoryId !== null) {
+            $where = 'WHERE (cc.id = ? OR cc.path LIKE ?)';
+            $binds = [$categoryId, '%/' . $categoryId . '/%'];
+        }
 
         return self::db()->query(
             "SELECT q.id, q.name, q.course, q.timeopen, q.timeclose, q.timelimit, q.password, q.grade, q.sumgrades,
-                    c.fullname AS course_name, c.shortname AS course_short, cm.id AS cmid, cm.visible
+                    c.fullname AS course_name, c.shortname AS course_short, c.visible AS course_visible,
+                    cm.id AS cmid, cm.visible
                FROM {$q} q
                JOIN {$c} c ON c.id = q.course
+               JOIN {$cc} cc ON cc.id = c.category
                JOIN {$m} m ON m.name = 'quiz'
                JOIN {$cm} cm ON cm.module = m.id AND cm.instance = q.id AND cm.deletioninprogress = 0
-              ORDER BY q.timeopen DESC, c.shortname, q.name"
+              {$where}
+              ORDER BY q.timeopen DESC, c.shortname, q.name",
+            $binds
+        )->getResultArray();
+    }
+
+    /** Kategori kursus Moodle, berurutan seperti di Moodle. */
+    public static function categories(): array
+    {
+        return self::db()->table(self::t('course_categories'))
+            ->select('id, name, parent, path, depth, coursecount, visible')
+            ->orderBy('sortorder')
+            ->get()->getResultArray();
+    }
+
+    /** Kursus (mata pelajaran) di kategori tertentu, termasuk subkategorinya. */
+    public static function coursesInCategory(int $categoryId): array
+    {
+        $c  = self::t('course');
+        $cc = self::t('course_categories');
+
+        return self::db()->query(
+            "SELECT c.id, c.fullname, c.shortname, c.visible, c.category, cc.name AS category_name
+               FROM {$c} c
+               JOIN {$cc} cc ON cc.id = c.category
+              WHERE c.id > 1 AND (cc.id = ? OR cc.path LIKE ?)
+              ORDER BY cc.sortorder, c.sortorder",
+            [$categoryId, '%/' . $categoryId . '/%']
         )->getResultArray();
     }
 
