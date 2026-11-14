@@ -47,6 +47,12 @@ load_conf() {
         [ -n "${!v:-}" ] || die "$v di ha.conf belum diisi."
     done
     [ "${#HA_SECRET}" -ge 32 ] || die "HA_SECRET terlalu pendek. Buat dengan: openssl rand -hex 32"
+    # Alamat berupa IP (jaringan lokal) memakai http biasa; domain Cloudflare memakai https.
+    if [ -z "${PAKAI_HTTPS:-}" ]; then
+        if [[ "$DOMAIN_UTAMA" =~ ^[0-9.]+$ ]]; then PAKAI_HTTPS=tidak; else PAKAI_HTTPS=ya; fi
+    fi
+    local s=http; [ "$PAKAI_HTTPS" = ya ] && s=https
+    URL_UTAMA="$s://$DOMAIN_UTAMA"; URL_CADANGAN="$s://$DOMAIN_CADANGAN"
     mkdir -p "$HA_DIR"; chmod 700 "$HA_DIR"
     if [ "$(readlink -f "$src")" != "$HA_DIR/ha.conf" ]; then install -m 600 "$src" "$HA_DIR/ha.conf"; fi
 }
@@ -135,8 +141,13 @@ EOF
 }
 
 setup_web() {
-    local domain="$1"
-    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli; alamat https://$domain"
+    local url="$1"
+    if [ "$PAKAI_HTTPS" != ya ]; then
+        log "Nginx: HTTP biasa (jaringan lokal); alamat $url"
+        set_wwwroot "$url"
+        return
+    fi
+    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli; alamat $url"
     [ -s "$SSL_DIR/origin.pem" ] && [ -s "$SSL_DIR/origin.key" ] || die "Sertifikat Cloudflare Origin belum ada.
   Salin file yang SAMA dengan server utama ke:
     $SSL_DIR/origin.pem   (Origin Certificate)
@@ -164,7 +175,12 @@ setup_web() {
     nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
     systemctl reload nginx
 
-    local url="https://$domain" pat
+    set_wwwroot "$url"
+}
+
+# Alamat Moodle dan CBT Admin di server ini.
+set_wwwroot() {
+    local url="$1" pat
     pat='^([$]CFG->wwwroot[[:space:]]*=).*'
     sed -i -E "s#$pat#\\1 '$url';#" "$CONFIG"
     php -l "$CONFIG" >/dev/null || die "config.php rusak setelah alamat diganti."
@@ -243,8 +259,8 @@ EOF
 pasang() {
     check_prereq
     load_conf
-    echo "Server ini disiapkan sebagai CADANGAN: https://$DOMAIN_CADANGAN ($CADANGAN_IP)."
-    echo "Utama: https://$DOMAIN_UTAMA ($UTAMA_IP)."
+    echo "Server ini disiapkan sebagai CADANGAN: $URL_CADANGAN ($CADANGAN_IP)."
+    echo "Utama: $URL_UTAMA ($UTAMA_IP)."
     warn "Database moodle dan cbtadmin di server INI akan DIHAPUS lalu diganti salinan dari server utama."
     confirm "YA"
 
@@ -258,7 +274,7 @@ pasang() {
         sleep 2
     done
     echo "Server utama terjangkau lewat WireGuard."
-    setup_web "$DOMAIN_CADANGAN"
+    setup_web "$URL_CADANGAN"
     set_site_mode cadangan
 
     log "Peran server: cadangan (cron Moodle dan token dimatikan di sini)"
@@ -417,7 +433,7 @@ status() {
 pindah() {
     load_conf
     [ "$(cat "$ROLE_FILE" 2>/dev/null)" = cadangan ] || die "Server ini bukan cadangan."
-    echo "Server ini (https://$DOMAIN_CADANGAN) akan dijadikan SERVER UTAMA."
+    echo "Server ini ($URL_CADANGAN) akan dijadikan SERVER UTAMA."
     if ping -c1 -W2 "$PEER_WG_IP" >/dev/null 2>&1; then
         warn "Server utama MASIH terhubung. Matikan server utama (atau hapus DNS $DOMAIN_UTAMA di Cloudflare)
   supaya siswa tidak lagi mengerjakan di sana; kalau dua server sama-sama menerima jawaban, datanya bercabang."
@@ -454,7 +470,7 @@ pindah() {
     echo
     echo "============================================================"
     echo "  SERVER INI SEKARANG UTAMA"
-    echo "  Umumkan ke siswa alamat baru:  https://$DOMAIN_CADANGAN"
+    echo "  Umumkan ke siswa alamat baru:  $URL_CADANGAN"
     echo "  Siswa login lagi lalu melanjutkan quiz; jawaban tersimpan."
     echo
     echo "  JANGAN hidupkan server lama sebagai utama lagi. Untuk menjadikannya"

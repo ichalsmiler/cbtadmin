@@ -4,9 +4,11 @@
 #  Setelah skrip dijalankan, salinan aman disimpan di /etc/cbt-ha/ha.conf.
 # =============================================================================
 
-# Alamat masing-masing server (DNS di Cloudflare, mode Proxied / awan oranye).
-# Siswa memakai alamat utama. Bila server utama rusak dan cadangan dipindah
-# menjadi utama, siswa diberi tahu alamat cadangan.
+# Alamat masing-masing server. Siswa memakai alamat utama. Bila server utama
+# rusak dan cadangan dipindah menjadi utama, siswa diberi tahu alamat cadangan.
+#  - VPS + Cloudflare: isi domain (DNS Proxied / awan oranye) -> https
+#  - Jaringan lokal sekolah: isi IP server, mis. 172.16.32.154 -> http biasa,
+#    tanpa sertifikat Cloudflare
 DOMAIN_UTAMA="utama.sekolah.sch.id"
 DOMAIN_CADANGAN="cadangan.sekolah.sch.id"
 

@@ -104,6 +104,10 @@ Dua VPS, masing-masing dengan alamatnya sendiri di Cloudflare (mis. `utama.sekol
 pribadi. Selama belum dipakai, alamat cadangan menampilkan halaman "Server cadangan, belum aktif".
 Bila server utama rusak, satu perintah membuka ujian di alamat cadangan.
 
+Kedua server juga boleh di jaringan lokal sekolah: isi `DOMAIN_UTAMA` / `DOMAIN_CADANGAN` dengan IP
+server (mis. `172.16.32.154` dan `172.16.32.155`); skrip lalu memakai `http://` biasa dan langkah
+Cloudflare di bawah dilewati.
+
 Persiapan di **kedua** VPS (Debian 12/13):
 
 1. Pasang Moodle dengan alamat server itu sendiri, mis. di cadangan

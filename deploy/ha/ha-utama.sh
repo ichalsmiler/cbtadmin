@@ -43,6 +43,12 @@ load_conf() {
         [ -n "${!v:-}" ] || die "$v di ha.conf belum diisi."
     done
     [ "${#HA_SECRET}" -ge 32 ] || die "HA_SECRET terlalu pendek. Buat dengan: openssl rand -hex 32"
+    # Alamat berupa IP (jaringan lokal) memakai http biasa; domain Cloudflare memakai https.
+    if [ -z "${PAKAI_HTTPS:-}" ]; then
+        if [[ "$DOMAIN_UTAMA" =~ ^[0-9.]+$ ]]; then PAKAI_HTTPS=tidak; else PAKAI_HTTPS=ya; fi
+    fi
+    local s=http; [ "$PAKAI_HTTPS" = ya ] && s=https
+    URL_UTAMA="$s://$DOMAIN_UTAMA"; URL_CADANGAN="$s://$DOMAIN_CADANGAN"
     mkdir -p "$HA_DIR"; chmod 700 "$HA_DIR"
     if [ "$(readlink -f "$src")" != "$HA_DIR/ha.conf" ]; then install -m 600 "$src" "$HA_DIR/ha.conf"; fi
 }
@@ -130,8 +136,13 @@ EOF
 }
 
 setup_web() {
-    local domain="$1"
-    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat https://$domain"
+    local url="$1"
+    if [ "$PAKAI_HTTPS" != ya ]; then
+        log "Nginx: HTTP biasa (jaringan lokal); alamat $url"
+        set_wwwroot "$url"
+        return
+    fi
+    log "Nginx: HTTPS (Cloudflare Origin) dan IP asli siswa; alamat $url"
     [ -s "$SSL_DIR/origin.pem" ] && [ -s "$SSL_DIR/origin.key" ] || die "Sertifikat Cloudflare Origin belum ada.
   Buat di Cloudflare > SSL/TLS > Origin Server > Create Certificate, lalu simpan:
     $SSL_DIR/origin.pem   (Origin Certificate)
@@ -160,7 +171,12 @@ setup_web() {
     nginx -t >/dev/null 2>&1 || { nginx -t; die "Konfigurasi Nginx tidak valid."; }
     systemctl reload nginx
 
-    local url="https://$domain" pat
+    set_wwwroot "$url"
+}
+
+# Alamat Moodle dan CBT Admin di server ini.
+set_wwwroot() {
+    local url="$1" pat
     pat='^([$]CFG->wwwroot[[:space:]]*=).*'
     sed -i -E "s#$pat#\\1 '$url';#" "$CONFIG"
     php -l "$CONFIG" >/dev/null || die "config.php rusak setelah alamat diganti."
@@ -173,11 +189,11 @@ mdl_cfg() { runuser -u www-data -- php "$MOODLE_DIR/admin/cli/cfg.php" "$@"; }
 pasang() {
     check_prereq
     load_conf
-    echo "Server ini disiapkan sebagai UTAMA: https://$DOMAIN_UTAMA ($UTAMA_IP)."
-    echo "Cadangan: https://$DOMAIN_CADANGAN ($CADANGAN_IP)."
+    echo "Server ini disiapkan sebagai UTAMA: $URL_UTAMA ($UTAMA_IP)."
+    echo "Cadangan: $URL_CADANGAN ($CADANGAN_IP)."
 
     setup_wireguard "$CADANGAN_IP"
-    setup_web "$DOMAIN_UTAMA"
+    setup_web "$URL_UTAMA"
     set_site_mode aktif
 
     log "MariaDB: binlog untuk replikasi ke cadangan"
@@ -248,9 +264,9 @@ EOF
     echo
     echo "============================================================"
     echo "  SERVER UTAMA SIAP"
-    echo "  Alamat ujian : https://$DOMAIN_UTAMA  (DNS Cloudflare -> $UTAMA_IP, Proxied)"
+    echo "  Alamat ujian : $URL_UTAMA"
     echo "  Berikutnya   : jalankan  bash ha-cadangan.sh pasang  di $CADANGAN_IP"
-    echo "  Pastikan port UDP $WG_PORT terbuka di firewall penyedia VPS kedua server."
+    echo "  Pastikan port UDP $WG_PORT terbuka di firewall kedua server."
     echo "============================================================"
 }
 
