@@ -94,3 +94,6 @@ body { background: var(--page-bg); color: var(--ink); font-size: .95rem; }
 
 /* Tabel lebar di layar sempit: hanya tabelnya yang digeser, bukan seluruh halaman. */
 .dt-layout-table > .dt-layout-full { overflow-x: auto; }
+
+/* Daftar Ruang: lingkaran huruf di kolom Kode Login (seperti AIOCBT). */
+.ruang-avatar { display: inline-flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; border-radius: 50%; font-weight: 600; flex-shrink: 0; }

@@ -31,6 +31,11 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('daftar_ruang', 'Ruang::index');
     $routes->post('daftar_ruang/simpan', 'Ruang::save');
     $routes->post('daftar_ruang/hapus/(:num)', 'Ruang::delete/$1');
+    $routes->post('daftar_ruang/lokasi', 'Ruang::lokasi');
+    $routes->post('daftar_ruang/kode/(:num)', 'Ruang::kode/$1');
+    $routes->post('daftar_ruang/tukar/(:num)', 'Ruang::tukar/$1');
+    $routes->post('daftar_ruang/kembali', 'Ruang::kembali');
+    $routes->get('daftar_ruang/cetak', 'Ruang::cetak');
     $routes->post('daftar_ruang/sesi/simpan', 'Ruang::saveSesi');
     $routes->post('daftar_ruang/sesi/hapus/(:num)', 'Ruang::deleteSesi/$1');
 

@@ -10,7 +10,6 @@ $menu = [
     ['Blokir Siswa', 'slash-circle', 'blokir_siswa'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
     ['Daftar Ruang', 'door-open', 'daftar_ruang'],
-    ['Pengawas', 'person-badge', 'pengawas'],
     ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Absensi Ruang', 'dokumen/absensi'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
     ['Hasil Ujian', 'award', 'hasil_ujian'],
     ['Tools', 'gear', 'tools'],
@@ -37,7 +36,15 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
     </button>
     <a class="brand" href="<?= site_url('/') ?>"><i class="bi bi-pc-display-horizontal me-2"></i>CBT ADMIN</a>
     <span class="school d-none d-md-inline"><?= esc($namaSekolah) ?></span>
-    <span class="role ms-auto" title="<?= esc($adminNama) ?>"><?= $adminRole === 'admin' ? 'ADMINISTRATOR' : 'PROKTOR' ?></span>
+    <?php if (session()->get('tukar_dari')): ?>
+        <form class="ms-auto me-2" method="post" action="<?= site_url('daftar_ruang/kembali') ?>">
+            <?= csrf_field() ?>
+            <button class="btn btn-warning btn-sm" type="submit" title="Kembali ke akun administrator">
+                <i class="bi bi-arrow-left-right me-1"></i>Kembali ke Admin
+            </button>
+        </form>
+    <?php endif ?>
+    <span class="role <?= session()->get('tukar_dari') ? '' : 'ms-auto' ?>" title="<?= esc($adminNama) ?>"><?= $adminRole === 'admin' ? 'ADMINISTRATOR' : 'PROKTOR' ?></span>
 </header>
 
 <nav class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar">
