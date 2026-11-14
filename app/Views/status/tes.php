@@ -230,7 +230,7 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
             if (box.checked) { on++; }
         });
         var count = document.getElementById('mapelCount');
-        if (count) { count.textContent = on + ' dari ' + boxes.length + ' mapel aktif. Mapel nonaktif disembunyikan dari peserta setelah disimpan.'; }
+        if (count) { count.textContent = on + ' dari ' + boxes.length + ' mapel aktif. Setelah disimpan, mapel nonaktif dan semua course di kategori lain disembunyikan dari peserta.'; }
     };
     boxes.forEach(function (box) { box.addEventListener('change', refresh); });
     document.querySelectorAll('[data-mapel-all]').forEach(function (button) {

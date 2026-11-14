@@ -118,19 +118,23 @@ class StatusTes extends PanelController
             return redirect()->to(site_url('status_tes'))->with('error', 'Pilih tes (kategori) terlebih dahulu.');
         }
 
-        // Mapel yang dicentang dibuka, sisanya disembunyikan dari peserta.
+        // Hanya mapel yang dicentang di kategori ini yang tampil di Moodle; semua course lain,
+        // termasuk di kategori lain, disembunyikan dari peserta.
         $chosen = array_map('intval', (array) $this->request->getPost('ids'));
         try {
             $changes = [];
             $opened  = [];
+            $hidden  = 0;
             $courses = Moodle::coursesInCategory($catId);
-            foreach ($courses as $c) {
-                $visible = in_array((int) $c['id'], $chosen, true);
+            $inCat   = array_map('intval', array_column($courses, 'id'));
+            foreach (Moodle::allCourses() as $c) {
+                $visible = in_array((int) $c['id'], $inCat, true) && in_array((int) $c['id'], $chosen, true);
                 if ($visible) {
                     $opened[] = $c['shortname'];
                 }
                 if ((bool) (int) $c['visible'] !== $visible) {
                     $changes[] = ['id' => (int) $c['id'], 'visible' => $visible];
+                    $hidden += $visible ? 0 : 1;
                 }
             }
             if ($courses !== [] && $opened === []) {
@@ -148,7 +152,8 @@ class StatusTes extends PanelController
         }
 
         Settings::set('tes_kategori', (string) $catId);
-        $message = 'Tes aktif: ' . $name . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka.';
+        $message = 'Tes aktif: ' . $name . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka; course lain disembunyikan'
+            . ($hidden > 0 ? ' (' . $hidden . ' baru disembunyikan).' : '.');
         try {
             if (ActiveTest::tokenEnabled()) {
                 if (ActiveTest::token() === '') {

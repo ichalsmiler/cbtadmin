@@ -102,6 +102,15 @@ class Moodle
         )->getResultArray();
     }
 
+    /** Semua kursus (kecuali halaman depan situs) beserta status tampilnya. */
+    public static function allCourses(): array
+    {
+        return self::db()->table(self::t('course'))
+            ->select('id, shortname, visible, category')
+            ->where('id >', 1)
+            ->get()->getResultArray();
+    }
+
     /** ID user yang bukan peserta: site admin dan guest. */
     public static function nonParticipantIds(): array
     {
