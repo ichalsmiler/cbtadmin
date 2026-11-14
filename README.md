@@ -87,7 +87,9 @@ mariadb cbtadmin < cbtadmin_backup_YYYYMMDD_HHMMSS.sql
 
 - **Daftar Tes** berisi kategori kursus Moodle. Kategori yang disimpan menjadi tes aktif; mata pelajaran
   adalah kursus di kategori itu (termasuk subkategorinya).
-- **Matpel** membuka atau menyembunyikan kursus (minimal 1 tetap aktif). **Reset Default** membuka
+- Di bawah Daftar Tes tampil **Mata Pelajaran** (kursus di kategori yang dipilih) dengan sakelar
+  aktif/nonaktif; **Simpan** menyimpan tes aktif sekaligus membuka atau menyembunyikan kursus
+  (minimal 1 tetap aktif). **Reset Default** membuka
   kembali semua kursus di tes aktif, mis. untuk ujian susulan.
 - **Token** (6 huruf) dipasang sebagai password di semua quiz pada tes aktif. **Release** membuat token
   baru seketika; cron `/etc/cron.d/cbtadmin` (`php spark cbt:token`, tiap menit) me-release token sesuai

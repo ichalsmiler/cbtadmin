@@ -20,8 +20,10 @@ class StatusTes extends PanelController
         $courses    = [];
         $rows       = [];
         $error      = false;
-        $category   = null;
+        $category   = null;  // tes aktif (tersimpan)
+        $shown      = null;  // kategori yang mapelnya sedang ditampilkan
         $catId      = ActiveTest::categoryId();
+        $pick       = (int) $this->request->getGet('kat');
 
         try {
             $categories = Moodle::categories();
@@ -29,10 +31,16 @@ class StatusTes extends PanelController
                 if ((int) $c['id'] === $catId) {
                     $category = $c;
                 }
+                if ((int) $c['id'] === $pick) {
+                    $shown = $c;
+                }
+            }
+            $shown ??= $category;
+            if ($shown) {
+                $courses = Moodle::coursesInCategory((int) $shown['id']);
             }
             if ($category) {
-                $courses = Moodle::coursesInCategory($catId);
-                $rows    = self::quizRows($catId);
+                $rows = self::quizRows($catId);
             }
         } catch (\Throwable $e) {
             $error = true;
@@ -43,6 +51,7 @@ class StatusTes extends PanelController
             'title'        => 'Status Test',
             'categories'   => $categories,
             'category'     => $category,
+            'shown'        => $shown,
             'courses'      => $courses,
             'rows'         => $rows,
             'moodleError'  => $error,
@@ -64,10 +73,13 @@ class StatusTes extends PanelController
         ]);
     }
 
-    /** Simpan kategori tes aktif, lalu pasang token di quiz-quiznya. */
+    /**
+     * Simpan tes aktif (kategori) beserta mapel yang dibuka, lalu pasang token di quiz-quiznya.
+     */
     public function kategori()
     {
         $catId = (int) $this->request->getPost('kat_id');
+        $back  = site_url('status_tes') . '?kat=' . $catId;
         $name  = null;
         try {
             foreach (Moodle::categories() as $c) {
@@ -82,8 +94,37 @@ class StatusTes extends PanelController
             return redirect()->to(site_url('status_tes'))->with('error', 'Pilih tes (kategori) terlebih dahulu.');
         }
 
+        // Mapel yang dicentang dibuka, sisanya disembunyikan dari peserta.
+        $chosen = array_map('intval', (array) $this->request->getPost('ids'));
+        try {
+            $changes = [];
+            $opened  = [];
+            $courses = Moodle::coursesInCategory($catId);
+            foreach ($courses as $c) {
+                $visible = in_array((int) $c['id'], $chosen, true);
+                if ($visible) {
+                    $opened[] = $c['shortname'];
+                }
+                if ((bool) (int) $c['visible'] !== $visible) {
+                    $changes[] = ['id' => (int) $c['id'], 'visible' => $visible];
+                }
+            }
+            if ($courses !== [] && $opened === []) {
+                return redirect()->to($back)->with('error', 'Harus ada minimal 1 mata pelajaran yang aktif.');
+            }
+            $failed = $changes === [] ? [] : array_filter(
+                MoodleBridge::call('course_visibility', ['courses' => $changes]),
+                static fn ($item) => isset($item['error'])
+            );
+        } catch (\Throwable $e) {
+            return redirect()->to($back)->with('error', 'Gagal memperbarui mata pelajaran: ' . $e->getMessage());
+        }
+        if ($failed !== []) {
+            return redirect()->to($back)->with('error', count($failed) . ' mata pelajaran gagal diubah: ' . reset($failed)['error']);
+        }
+
         Settings::set('tes_kategori', (string) $catId);
-        $message = 'Tes aktif: ' . $name . '.';
+        $message = 'Tes aktif: ' . $name . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka.';
         try {
             if (ActiveTest::tokenEnabled()) {
                 if (ActiveTest::token() === '') {
@@ -96,51 +137,9 @@ class StatusTes extends PanelController
         } catch (\Throwable $e) {
             $message .= ' Tetapi token gagal dipasang: ' . $e->getMessage();
         }
-        ActivityLog::add('tes_aktif', $name . ' (kategori ' . $catId . ')');
+        ActivityLog::add('tes_aktif', $name . ' (kategori ' . $catId . '); mapel aktif: ' . implode(', ', $opened));
 
         return redirect()->to(site_url('status_tes'))->with('success', $message);
-    }
-
-    /** Buka/tutup mata pelajaran (kursus) di kategori aktif. */
-    public function mapel()
-    {
-        $catId = ActiveTest::categoryId();
-        if ($catId === 0) {
-            return redirect()->to(site_url('status_tes'))->with('error', 'Pilih dan simpan tes terlebih dahulu.');
-        }
-        $chosen = array_map('intval', (array) $this->request->getPost('ids'));
-        if ($chosen === []) {
-            return redirect()->to(site_url('status_tes'))->with('error', 'Harus ada minimal 1 mata pelajaran yang aktif.');
-        }
-
-        try {
-            $changes = [];
-            $opened  = [];
-            foreach (Moodle::coursesInCategory($catId) as $c) {
-                $visible = in_array((int) $c['id'], $chosen, true);
-                if ($visible) {
-                    $opened[] = $c['shortname'];
-                }
-                if ((bool) (int) $c['visible'] !== $visible) {
-                    $changes[] = ['id' => (int) $c['id'], 'visible' => $visible];
-                }
-            }
-            if ($opened === []) {
-                return redirect()->to(site_url('status_tes'))->with('error', 'Harus ada minimal 1 mata pelajaran yang aktif.');
-            }
-            $failed = $changes === [] ? [] : array_filter(
-                MoodleBridge::call('course_visibility', ['courses' => $changes]),
-                static fn ($item) => isset($item['error'])
-            );
-        } catch (\Throwable $e) {
-            return redirect()->to(site_url('status_tes'))->with('error', 'Gagal memperbarui mata pelajaran: ' . $e->getMessage());
-        }
-        if ($failed !== []) {
-            return redirect()->to(site_url('status_tes'))->with('error', count($failed) . ' mata pelajaran gagal diubah: ' . reset($failed)['error']);
-        }
-        ActivityLog::add('update_mapel', 'aktif: ' . implode(', ', $opened));
-
-        return redirect()->to(site_url('status_tes'))->with('success', 'Daftar mata pelajaran disimpan: ' . count($opened) . ' aktif.');
     }
 
     /** Release token baru sekarang. */
