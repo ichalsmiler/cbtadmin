@@ -121,7 +121,16 @@ class StatusTes extends PanelController
         // Hanya mapel yang dicentang di kategori ini yang tampil di Moodle; semua course lain,
         // termasuk di kategori lain, disembunyikan dari peserta.
         $chosen = array_map('intval', (array) $this->request->getPost('ids'));
+        if ($chosen === [] && Moodle::coursesInCategory($catId) !== []) {
+            return redirect()->to($back)->with('error', 'Harus ada minimal 1 mata pelajaran yang aktif.');
+        }
         try {
+            // Kategori lain disembunyikan dulu (Moodle ikut menyembunyikan course di dalamnya),
+            // lalu status tampil tiap course disamakan dengan pilihan mapel.
+            $catChanged = array_filter(
+                MoodleBridge::call('category_visibility', ['active' => $catId]),
+                static fn ($item) => ($item['status'] ?? '') === 'disembunyikan'
+            );
             $changes = [];
             $opened  = [];
             $hidden  = 0;
@@ -153,7 +162,8 @@ class StatusTes extends PanelController
 
         Settings::set('tes_kategori', (string) $catId);
         $message = 'Tes aktif: ' . $name . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka; course lain disembunyikan'
-            . ($hidden > 0 ? ' (' . $hidden . ' baru disembunyikan).' : '.');
+            . ($hidden > 0 ? ' (' . $hidden . ' baru disembunyikan).' : '.')
+            . ($catChanged !== [] ? ' ' . count($catChanged) . ' kategori lain disembunyikan.' : '');
         try {
             if (ActiveTest::tokenEnabled()) {
                 if (ActiveTest::token() === '') {

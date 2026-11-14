@@ -290,6 +290,28 @@ try {
             }
             break;
 
+        case 'category_visibility':
+            // Hanya kategori tes aktif (beserta induk dan subkategorinya) yang tampil; kategori lain disembunyikan.
+            // Kategori ditampilkan dulu, baru disembunyikan, supaya induk tes aktif tidak ikut tertutup.
+            $active = core_course_category::get((int) $in['active'], MUST_EXIST, true);
+            $keep   = array_map('intval', array_filter(explode('/', (string) $active->path)));
+            $all    = $DB->get_records('course_categories', null, 'depth ASC', 'id, path, visible');
+            foreach ($all as $cat) {
+                $inActive = in_array((int) $cat->id, $keep, true) || str_starts_with($cat->path . '/', $active->path . '/');
+                if ($inActive && ! $cat->visible) {
+                    core_course_category::get($cat->id, MUST_EXIST, true)->show();
+                    $result['items'][] = ['id' => (int) $cat->id, 'status' => 'ditampilkan'];
+                }
+            }
+            foreach (array_reverse($all, true) as $cat) {
+                $inActive = in_array((int) $cat->id, $keep, true) || str_starts_with($cat->path . '/', $active->path . '/');
+                if (! $inActive && $DB->get_field('course_categories', 'visible', ['id' => $cat->id])) {
+                    core_course_category::get($cat->id, MUST_EXIST, true)->hide();
+                    $result['items'][] = ['id' => (int) $cat->id, 'status' => 'disembunyikan'];
+                }
+            }
+            break;
+
         case 'suspend_users':
             // Blokir (suspend) atau buka blokir akun siswa; yang diblokir langsung dikeluarkan.
             $suspend = ! empty($in['suspend']);
