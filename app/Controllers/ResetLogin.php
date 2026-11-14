@@ -6,6 +6,7 @@ use App\Libraries\ActivityLog;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
 use App\Libraries\Pengawas;
+use App\Libraries\Tingkat;
 
 class ResetLogin extends PanelController
 {
@@ -13,6 +14,7 @@ class ResetLogin extends PanelController
     {
         $cari    = trim((string) $this->request->getGet('cari'));
         $ruangId = $this->myRuang() !== null ? (string) $this->myRuang() : (string) $this->request->getGet('ruang');
+        $tingkat = Tingkat::dariRequest();
         $rows    = [];
         $error   = false;
 
@@ -39,6 +41,9 @@ class ResetLogin extends PanelController
                 if ($ruangId === '0' ? ($info['ruang_id'] ?? null) !== null : ($ruangId !== '' && (string) ($info['ruang_id'] ?? '') !== $ruangId)) {
                     continue;
                 }
+                if (! Tingkat::cocok($info['kelas'] ?? '', $tingkat)) {
+                    continue;
+                }
                 $rows[] = [
                     'userid'   => (int) $id,
                     'username' => $u['username'],
@@ -61,6 +66,7 @@ class ResetLogin extends PanelController
             'rows'      => $rows,
             'cari'      => $cari,
             'ruangId'   => $ruangId,
+            'tingkat'   => $tingkat,
             'ruangList' => $this->ruangList(),
             'lockRuang' => $this->myRuang() !== null,
             'error'     => $error,

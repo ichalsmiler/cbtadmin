@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 <?php
-$query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId], static fn ($v) => $v !== ''));
+$query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'tingkat' => $tingkat], static fn ($v) => $v !== ''));
 $total = array_sum(array_column($ruang, 'total'));
 $hadir = array_sum(array_column($ruang, 'hadir'));
 ?>
@@ -32,6 +32,7 @@ $hadir = array_sum(array_column($ruang, 'hadir'));
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
         </form>
     </div>

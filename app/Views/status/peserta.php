@@ -2,8 +2,8 @@
 
 <?= $this->section('content') ?>
 <?php
-$query = static function (array $extra = []) use ($quiz, $ruangId): string {
-    $params = array_filter(['quiz' => $quiz['id'] ?? '', 'ruang' => $ruangId] + $extra, static fn ($v) => $v !== '' && $v !== null);
+$query = static function (array $extra = []) use ($quiz, $ruangId, $tingkat): string {
+    $params = array_filter(['quiz' => $quiz['id'] ?? '', 'ruang' => $ruangId, 'tingkat' => $tingkat] + $extra, static fn ($v) => $v !== '' && $v !== null);
 
     return $params === [] ? '' : '?' . http_build_query($params);
 };
@@ -44,6 +44,7 @@ $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
 
         <ul class="nav nav-pills mt-3 small">

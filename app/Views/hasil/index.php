@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 <?php
-$query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'kelas' => $kelas], static fn ($v) => $v !== ''));
+$query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'kelas' => $kelas, 'tingkat' => $tingkat], static fn ($v) => $v !== ''));
 $num   = static fn ($v) => $v === null ? '–' : number_format($v, 2, ',', '.');
 $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 'secondary'];
 ?>
@@ -41,6 +41,7 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
         </form>
     </div>

@@ -6,6 +6,7 @@ use App\Libraries\ActivityLog;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
 use App\Libraries\QuizStatus;
+use App\Libraries\Tingkat;
 
 /**
  * Hapus attempt quiz di Moodle (khusus administrator). Moodle mengunci quiz ke 1 percobaan,
@@ -29,7 +30,7 @@ class HapusAttempt extends PanelController
             $all     = $quiz ? QuizStatus::forQuiz($quiz) : QuizStatus::allQuizzes();
             // Hanya peserta yang sudah punya attempt (sedang mengerjakan atau selesai).
             $rows = array_values(array_filter(
-                QuizStatus::filter($all, $ruangId, $kelas),
+                QuizStatus::filter($all, $ruangId, $kelas, Tingkat::dariRequest()),
                 static fn (array $r): bool => $r['status'] !== 'notstarted'
             ));
         } catch (\Throwable $e) {
@@ -46,6 +47,7 @@ class HapusAttempt extends PanelController
             'ruangId'   => $ruangId,
             'kelasList' => array_column(db_connect()->query("SELECT DISTINCT kelas FROM peserta WHERE kelas <> '' ORDER BY kelas")->getResultArray(), 'kelas'),
             'kelas'     => $kelas,
+            'tingkat'   => Tingkat::dariRequest(),
             'error'     => $error,
         ]);
     }

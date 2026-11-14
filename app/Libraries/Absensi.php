@@ -133,7 +133,17 @@ class Absensi
         if ($peserta === []) {
             return 0;
         }
-        $db  = db_connect();
+        $db = db_connect();
+        if (! $suspend) {
+            // Siswa yang diblokir karena pelanggaran tetap disuspend; cukup lepaskan tanda absensinya.
+            foreach (Blokir::aktifIds(array_keys($peserta)) as $pid) {
+                $db->table('absensi')->where('tanggal', $tanggal)->where('peserta_id', $pid)->update(['diblokir' => 0]);
+                unset($peserta[$pid]);
+            }
+            if ($peserta === []) {
+                return 0;
+            }
+        }
         $ids = array_column(
             Moodle::db()->table(Moodle::t('user'))->select('id, username')->where('deleted', 0)->whereIn('username', array_values($peserta))->get()->getResultArray(),
             'id',

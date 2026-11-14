@@ -7,6 +7,7 @@ use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\Pdf;
 use App\Libraries\QuizStatus;
+use App\Libraries\Tingkat;
 
 class Dokumen extends PanelController
 {
@@ -100,6 +101,10 @@ class Dokumen extends PanelController
         if ($kelas !== null && $kelas !== '__semua') {
             $builder->where('p.kelas', (string) $kelas);
         }
+        $tingkat = Tingkat::dariRequest();
+        if ($tingkat !== '') {
+            $builder->where('p.kelas REGEXP ' . db_connect()->escape(Tingkat::regexp($tingkat)), null, false);
+        }
         if ($sesiId !== '') {
             $builder->where('COALESCE(p.sesi_id, r.sesi_id)', (int) $sesiId, false);
         }
@@ -156,7 +161,8 @@ class Dokumen extends PanelController
     {
         $quizId  = (int) $this->request->getGet('quiz');
         $ruangId = (string) $this->request->getGet('ruang');
-        $data    = ['quiz' => null, 'quizzes' => [], 'ruang' => [], 'error' => false, 'quizId' => $quizId, 'ruangId' => $ruangId];
+        $tingkat = Tingkat::dariRequest();
+        $data    = ['quiz' => null, 'quizzes' => [], 'ruang' => [], 'error' => false, 'quizId' => $quizId, 'ruangId' => $ruangId, 'tingkat' => $tingkat];
 
         $ruangInfo = array_column(db_connect()->table('ruang r')
             ->select('r.id, r.nama, r.pengawas, s.nama AS sesi_nama, s.jam_mulai, s.jam_selesai')
@@ -172,7 +178,7 @@ class Dokumen extends PanelController
             }
 
             $groups = [];
-            foreach (QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId) as $r) {
+            foreach (QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, '', $tingkat) as $r) {
                 $key = $r['ruang_id'] ?? 0;
                 $groups[$key] ??= [
                     'nama'     => $r['ruang'] ?? '(tanpa ruang)',

@@ -1,7 +1,7 @@
 <?= $this->extend('layout/main') ?>
 
 <?= $this->section('content') ?>
-<?php $query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'kelas' => $kelas], static fn ($v) => $v !== '')); ?>
+<?php $query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'kelas' => $kelas, 'tingkat' => $tingkat], static fn ($v) => $v !== '')); ?>
 <?php if ($error): ?>
     <div class="alert alert-danger" role="alert">Database Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.</div>
 <?php endif ?>
@@ -37,6 +37,7 @@
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Periksa</button>
         </form>
     </div>

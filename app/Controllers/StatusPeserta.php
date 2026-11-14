@@ -8,6 +8,7 @@ use App\Libraries\MoodleBridge;
 use App\Libraries\Pengawas;
 use App\Libraries\QuizStatus;
 use App\Libraries\Settings;
+use App\Libraries\Tingkat;
 
 class StatusPeserta extends PanelController
 {
@@ -33,7 +34,7 @@ class StatusPeserta extends PanelController
                     $quiz = $q;
                 }
             }
-            $rows = QuizStatus::filter($quiz ? QuizStatus::forQuiz($quiz) : QuizStatus::allQuizzes(), $ruangId);
+            $rows = QuizStatus::filter($quiz ? QuizStatus::forQuiz($quiz) : QuizStatus::allQuizzes(), $ruangId, '', Tingkat::dariRequest());
         } catch (\Throwable $e) {
             $error = true;
             log_message('error', 'Status Peserta: ' . $e->getMessage());
@@ -58,6 +59,7 @@ class StatusPeserta extends PanelController
             'ruangList' => $this->ruangList(),
             'lockRuang' => $this->myRuang() !== null,
             'ruangId'   => $ruangId,
+            'tingkat'   => Tingkat::dariRequest(),
             'error'     => $error,
             'refresh'   => max(5, (int) Settings::get('refresh_interval', '30')),
             'now'       => time(),

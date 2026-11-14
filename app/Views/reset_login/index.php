@@ -25,8 +25,9 @@
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
-            <?php if ($cari !== '' || ($ruangId !== '' && ! $lockRuang)): ?>
+            <?php if ($cari !== '' || $tingkat !== '' || ($ruangId !== '' && ! $lockRuang)): ?>
                 <a class="btn btn-link btn-sm" href="<?= site_url('reset_login') ?>">Hapus filter</a>
             <?php endif ?>
         </form>

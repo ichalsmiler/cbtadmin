@@ -51,6 +51,7 @@ $fmt    = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
     </div>
 </div>

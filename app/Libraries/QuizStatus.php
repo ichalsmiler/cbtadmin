@@ -86,10 +86,13 @@ class QuizStatus
      * Lengkapi baris dengan data panel (kelas, ruang, nomor peserta) dan saring
      * menurut ruang ('' = semua, '0' = tanpa ruang) dan kelas ('' = semua).
      */
-    public static function filter(array $rows, string $ruangId, string $kelas = ''): array
+    public static function filter(array $rows, string $ruangId, string $kelas = '', string $tingkat = ''): array
     {
-        return array_values(array_filter($rows, static function (array $row) use ($ruangId, $kelas): bool {
+        return array_values(array_filter($rows, static function (array $row) use ($ruangId, $kelas, $tingkat): bool {
             if ($kelas !== '' && $row['kelas'] !== $kelas) {
+                return false;
+            }
+            if (! Tingkat::cocok($row['kelas'], $tingkat)) {
                 return false;
             }
             if ($ruangId === '0') {

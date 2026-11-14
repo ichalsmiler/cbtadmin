@@ -1,7 +1,7 @@
 <?= $this->extend('layout/main') ?>
 
 <?= $this->section('content') ?>
-<?php $query = http_build_query(array_filter(['kelas' => $filterKelas, 'ruang' => $filterRuang], static fn ($v) => $v !== '')); ?>
+<?php $query = http_build_query(array_filter(['kelas' => $filterKelas, 'ruang' => $filterRuang, 'tingkat' => $tingkat], static fn ($v) => $v !== '')); ?>
 
 <div class="card mb-3">
     <div class="card-body d-flex flex-wrap gap-2 align-items-end">
@@ -25,6 +25,7 @@
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
         <div class="ms-auto d-flex flex-wrap gap-2">
             <button class="btn btn-primary btn-sm" type="button" data-fill-modal="#pesertaModal"

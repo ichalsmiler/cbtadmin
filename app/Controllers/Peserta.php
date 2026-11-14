@@ -8,6 +8,7 @@ use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
 use App\Libraries\Pengawas;
 use App\Libraries\Settings;
+use App\Libraries\Tingkat;
 
 class Peserta extends PanelController
 {
@@ -30,6 +31,7 @@ class Peserta extends PanelController
             'sesiList'    => $db->table('sesi')->orderBy('nama')->get()->getResultArray(),
             'filterKelas' => $kelas,
             'filterRuang' => $ruangId,
+            'tingkat'     => Tingkat::dariRequest(),
         ]);
     }
 
@@ -398,6 +400,10 @@ class Peserta extends PanelController
             ->join('sesi s', 's.id = p.sesi_id', 'left');
         if ($kelas !== '') {
             $builder->where('p.kelas', $kelas);
+        }
+        $tingkat = Tingkat::dariRequest();
+        if ($tingkat !== '') {
+            $builder->where('p.kelas REGEXP ' . db_connect()->escape(Tingkat::regexp($tingkat)), null, false);
         }
         if ($ruangId === '0') {
             $builder->where('p.ruang_id', null);

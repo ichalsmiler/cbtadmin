@@ -70,6 +70,9 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('dokumen/cetak_doc/daftar_hadir', 'Dokumen::daftarHadir');
     $routes->get('kehadiran', 'Kehadiran::index');
     $routes->post('kehadiran/simpan', 'Kehadiran::simpan');
+    $routes->get('blokir_siswa', 'BlokirSiswa::index');
+    $routes->post('blokir_siswa/blokir', 'BlokirSiswa::blokir');
+    $routes->post('blokir_siswa/buka', 'BlokirSiswa::buka');
     $routes->get('dokumen/absensi', 'Kehadiran::rekap');
     $routes->post('dokumen/absensi/buka', 'Kehadiran::buka');
     $routes->get('dokumen/absensi/export', 'Kehadiran::export');

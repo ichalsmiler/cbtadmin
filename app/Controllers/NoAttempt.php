@@ -6,6 +6,7 @@ use App\Libraries\ActivityLog;
 use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\QuizStatus;
+use App\Libraries\Tingkat;
 
 class NoAttempt extends PanelController
 {
@@ -45,14 +46,14 @@ class NoAttempt extends PanelController
         $kelas   = (string) $this->request->getGet('kelas');
         $data    = [
             'quiz' => null, 'quizzes' => [], 'rows' => [], 'terdaftar' => 0, 'error' => false,
-            'quizId' => $quizId, 'ruangId' => $ruangId, 'kelas' => $kelas,
+            'quizId' => $quizId, 'ruangId' => $ruangId, 'kelas' => $kelas, 'tingkat' => Tingkat::dariRequest(),
         ];
 
         try {
             $data['quizzes'] = Moodle::quizzes();
             $data['quiz']    = $quizId > 0 ? QuizStatus::findQuiz($quizId) : null;
             if ($data['quiz']) {
-                $all               = QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, $kelas);
+                $all               = QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, $kelas, Tingkat::dariRequest());
                 $data['terdaftar'] = count($all);
                 $data['rows']      = array_values(array_filter($all, static fn ($r) => $r['status'] === 'notstarted'));
                 usort($data['rows'], static fn ($a, $b) => strnatcasecmp((string) $a['ruang'], (string) $b['ruang']) ?: [$a['kelas'], $a['nama']] <=> [$b['kelas'], $b['nama']]);

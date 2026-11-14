@@ -37,6 +37,9 @@
                             </select>
                         </div>
                         <div class="col-sm-6">
+                            <?= view('partials/filter_tingkat', ['tingkat' => '', 'size' => '', 'autoSubmit' => false]) ?>
+                        </div>
+                        <div class="col-sm-6">
                             <label class="form-label" for="fSesi">Sesi</label>
                             <select class="form-select" id="fSesi" name="sesi">
                                 <option value="">Semua sesi</option>

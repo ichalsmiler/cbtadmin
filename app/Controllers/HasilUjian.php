@@ -7,6 +7,7 @@ use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\Pdf;
 use App\Libraries\QuizStatus;
+use App\Libraries\Tingkat;
 
 class HasilUjian extends PanelController
 {
@@ -71,7 +72,7 @@ class HasilUjian extends PanelController
         $kelas   = (string) $this->request->getGet('kelas');
         $data    = [
             'quiz' => null, 'quizzes' => [], 'rows' => [], 'stats' => null, 'error' => false,
-            'quizId' => $quizId, 'ruangId' => $ruangId, 'kelas' => $kelas,
+            'quizId' => $quizId, 'ruangId' => $ruangId, 'kelas' => $kelas, 'tingkat' => Tingkat::dariRequest(),
         ];
 
         try {
@@ -85,7 +86,7 @@ class HasilUjian extends PanelController
             $grades = array_column(Moodle::db()->table(Moodle::t('quiz_grades'))
                 ->select('userid, grade')->where('quiz', $quizId)->get()->getResultArray(), 'grade', 'userid');
 
-            $rows = QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, $kelas);
+            $rows = QuizStatus::filter(QuizStatus::forQuiz($data['quiz']), $ruangId, $kelas, Tingkat::dariRequest());
             foreach ($rows as &$r) {
                 $r['nilai']  = isset($grades[$r['userid']]) ? (float) $grades[$r['userid']] : null;
                 $r['durasi'] = $r['status'] === 'finished' && $r['timefinish'] > 0 ? $r['timefinish'] - $r['timestart'] : null;
