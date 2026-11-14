@@ -103,19 +103,16 @@ class StatusPeserta extends PanelController
                 return $this->report($items, "tambah_waktu_{$minutes}_menit", "Waktu ditambah {$minutes} menit untuk %d peserta.");
             }
 
-            if (! in_array($aksi, ['submit', 'hapus'], true)) {
+            // Hapus attempt hanya lewat menu Hapus Attempt (khusus administrator).
+            if ($aksi !== 'submit') {
                 return redirect()->back()->with('error', 'Aksi tidak dikenal.');
             }
-            $attempts = $this->latestAttempts($pairs, $aksi === 'submit' ? ['inprogress', 'overdue'] : null);
+            $attempts = QuizStatus::latestAttemptIds($pairs, ['inprogress', 'overdue']);
             if ($attempts === []) {
-                return redirect()->back()->with('error', $aksi === 'submit'
-                    ? 'Tidak ada peserta terpilih yang sedang mengerjakan.'
-                    : 'Peserta terpilih belum punya attempt.');
+                return redirect()->back()->with('error', 'Tidak ada peserta terpilih yang sedang mengerjakan.');
             }
 
-            return $aksi === 'submit'
-                ? $this->report(MoodleBridge::call('finish_attempts', ['attemptids' => $attempts]), 'paksa_submit', '%d attempt disubmit.')
-                : $this->report(MoodleBridge::call('delete_attempts', ['attemptids' => $attempts]), 'hapus_attempt', '%d attempt dihapus.');
+            return $this->report(MoodleBridge::call('finish_attempts', ['attemptids' => $attempts]), 'paksa_submit', '%d attempt disubmit.');
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Aksi gagal: ' . $e->getMessage());
         }
@@ -142,32 +139,5 @@ class StatusPeserta extends PanelController
         }
 
         return redirect()->back()->with($errors === [] ? 'success' : 'error', $message);
-    }
-
-    /** ID attempt terakhir untuk tiap pasangan quiz/user. */
-    private function latestAttempts(array $pairs, ?array $states): array
-    {
-        $builder = Moodle::db()->table(Moodle::t('quiz_attempts'))
-            ->select('id, quiz, userid, attempt, state')
-            ->where('preview', 0)
-            ->groupStart();
-        foreach ($pairs as $quizId => $userIds) {
-            $builder->orGroupStart()->where('quiz', $quizId)->whereIn('userid', $userIds)->groupEnd();
-        }
-        $builder->groupEnd()->orderBy('attempt', 'ASC');
-
-        $latest = [];
-        foreach ($builder->get()->getResultArray() as $a) {
-            $latest[$a['quiz'] . ':' . $a['userid']] = $a;
-        }
-
-        $ids = [];
-        foreach ($latest as $a) {
-            if ($states === null || in_array($a['state'], $states, true)) {
-                $ids[] = (int) $a['id'];
-            }
-        }
-
-        return $ids;
     }
 }

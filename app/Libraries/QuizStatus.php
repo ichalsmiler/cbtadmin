@@ -100,6 +100,36 @@ class QuizStatus
         }));
     }
 
+    /**
+     * ID attempt terakhir untuk tiap pasangan quiz/user ($pairs = [quizId => [userId, ...]]),
+     * opsional hanya yang state-nya ada di $states.
+     */
+    public static function latestAttemptIds(array $pairs, ?array $states = null): array
+    {
+        $builder = Moodle::db()->table(Moodle::t('quiz_attempts'))
+            ->select('id, quiz, userid, attempt, state')
+            ->where('preview', 0)
+            ->groupStart();
+        foreach ($pairs as $quizId => $userIds) {
+            $builder->orGroupStart()->where('quiz', $quizId)->whereIn('userid', $userIds)->groupEnd();
+        }
+        $builder->groupEnd()->orderBy('attempt', 'ASC');
+
+        $latest = [];
+        foreach ($builder->get()->getResultArray() as $a) {
+            $latest[$a['quiz'] . ':' . $a['userid']] = $a;
+        }
+
+        $ids = [];
+        foreach ($latest as $a) {
+            if ($states === null || in_array($a['state'], $states, true)) {
+                $ids[] = (int) $a['id'];
+            }
+        }
+
+        return $ids;
+    }
+
     public static function statusOf(?string $state): string
     {
         return match ($state) {

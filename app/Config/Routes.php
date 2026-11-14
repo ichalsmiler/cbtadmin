@@ -56,6 +56,8 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->post('status_tes/waktu', 'StatusTes::waktu');
     $routes->get('status_peserta', 'StatusPeserta::index');
     $routes->post('status_peserta/aksi', 'StatusPeserta::aksi');
+    $routes->get('hapus_attempt', 'HapusAttempt::index');
+    $routes->post('hapus_attempt/hapus', 'HapusAttempt::hapus');
     $routes->get('status_peserta/(:segment)', 'StatusPeserta::index/$1');
 
     $routes->get('reset_login', 'ResetLogin::index');

@@ -7,6 +7,7 @@ $menu = [
     ['Token', 'key', 'token'],
     ['Status Peserta', 'people', 'status_peserta'],
     ['Reset Login Peserta', 'person-x', 'reset_login'],
+    ['Hapus Attempt', 'trash', 'hapus_attempt'],
     ['Laporan Kehadiran', 'clipboard-check', 'kehadiran'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
     ['Daftar Ruang', 'door-open', 'daftar_ruang'],
