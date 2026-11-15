@@ -98,4 +98,6 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('hasil_ujian', 'HasilUjian::index');
     $routes->get('hasil_ujian/export', 'HasilUjian::export');
     $routes->get('hasil_ujian/pdf', 'HasilUjian::pdf');
+    $routes->get('hasil_ujian/export_soal', 'HasilUjian::exportSoal');
+    $routes->get('hasil_ujian/export_analisis', 'HasilUjian::exportAnalisis');
 });

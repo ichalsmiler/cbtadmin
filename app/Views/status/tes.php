@@ -64,6 +64,19 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
 
         <form method="post" action="<?= site_url('status_tes/kategori') ?>">
             <?= csrf_field() ?>
+            <label class="form-label" for="sesi_id">Aktifkan untuk Sesi <span class="text-muted small">(wajib dipilih sebelum ujian diaktifkan)</span></label>
+            <select class="form-select mb-4" id="sesi_id" name="sesi_id" required>
+                <option value="">Pilih Sesi</option>
+                <?php foreach ($sesiList as $s): ?>
+                    <option value="<?= $s['id'] ?>" <?= $s['id'] === $sesiPilih ? 'selected' : '' ?>>
+                        <?= esc($s['label']) ?> · <?= number_format($s['jumlah'], 0, ',', '.') ?> peserta<?= $s['id'] === $sesiAktif ? ' — aktif' : '' ?>
+                    </option>
+                <?php endforeach ?>
+            </select>
+            <?php if ($sesiList === []): ?>
+                <div class="alert alert-warning small py-2 mt-n3 mb-4">Belum ada sesi. Impor peserta (kolom sesi) atau tambah sesi di Daftar Ruang.</div>
+            <?php endif ?>
+
             <label class="form-label" for="kat_id">Daftar Tes <span class="text-muted small">(kategori kursus Moodle)</span></label>
             <select class="form-select" id="kat_id" name="kat_id" required>
                 <option value="">Pilih Test</option>
@@ -246,7 +259,9 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
     var select = document.getElementById('kat_id');
     select.addEventListener('change', function () {
         if (select.value !== '') {
-            window.location.href = '<?= site_url('status_tes') ?>?kat=' + encodeURIComponent(select.value);
+            var sesi = document.getElementById('sesi_id');
+            window.location.href = '<?= site_url('status_tes') ?>?kat=' + encodeURIComponent(select.value)
+                + (sesi && sesi.value !== '' ? '&sesi=' + encodeURIComponent(sesi.value) : '');
         }
     });
 

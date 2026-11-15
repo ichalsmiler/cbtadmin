@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\ActivityLog;
+use App\Libraries\AnalisisSoal;
 use App\Libraries\Excel;
 use App\Libraries\Moodle;
 use App\Libraries\Pdf;
@@ -13,7 +14,18 @@ class HasilUjian extends PanelController
 {
     public function index(): string
     {
-        return $this->render('hasil/index', $this->collect() + [
+        $data = $this->collect();
+        $data['analisis'] = null;
+        if ($data['tab'] === 'analisis' && $data['quiz']) {
+            try {
+                $data['analisis'] = AnalisisSoal::analisis(AnalisisSoal::jawaban((int) $data['quiz']['id'], array_column($data['rows'], 'userid')));
+            } catch (\Throwable $e) {
+                $data['error'] = true;
+                log_message('error', 'Analisis soal: ' . $e->getMessage());
+            }
+        }
+
+        return $this->render('hasil/index', $data + [
             'title'     => 'Hasil Ujian',
             'ruangList' => $this->ruangList(),
             'kelasList' => array_column(db_connect()->table('peserta')->distinct()->select('kelas')->where('kelas !=', '')->orderBy('kelas')->get()->getResultArray(), 'kelas'),
@@ -41,6 +53,62 @@ class HasilUjian extends PanelController
         return $this->response->download(
             'hasil_' . preg_replace('/[^A-Za-z0-9]+/', '_', $data['quiz']['name']) . '_' . date('Ymd_His') . '.xlsx',
             Excel::build(['no', 'nomor_peserta', 'username', 'nama', 'kelas', 'ruang', 'status', 'nilai', 'mulai', 'selesai', 'durasi'], $rows)
+        );
+    }
+
+    /** Excel jawaban per nomor soal: B benar, S salah, – kosong, ? belum dinilai (sesuai filter halaman). */
+    public function exportSoal()
+    {
+        $data = $this->collect();
+        if (! $data['quiz']) {
+            return redirect()->to(site_url('hasil_ujian'))->with('error', 'Pilih quiz dulu.');
+        }
+        $soal = AnalisisSoal::jawaban((int) $data['quiz']['id'], array_column($data['rows'], 'userid'));
+
+        $headers = ['no', 'nomor_peserta', 'nama', 'kelas', 'ruang', 'status', 'nilai', 'benar', 'salah', 'kosong'];
+        foreach ($soal['soal'] as $s) {
+            $headers[] = (string) $s['no'];
+        }
+        $rows = [];
+        foreach ($data['rows'] as $i => $r) {
+            $per   = $soal['jawaban'][$r['userid']] ?? null;
+            $kode  = array_map(static fn ($s) => $per === null ? '' : AnalisisSoal::kode($per[$s['slot']] ?? null), $soal['soal']);
+            $count = array_count_values($kode);
+            $rows[] = array_merge([
+                $i + 1, $r['nomor_peserta'], $r['nama'], $r['kelas'], $r['ruang'] ?? '', self::label($r['status']),
+                $r['nilai'] === null ? '' : number_format($r['nilai'], 2, ',', ''),
+                $per === null ? '' : ($count['B'] ?? 0), $per === null ? '' : ($count['S'] ?? 0), $per === null ? '' : ($count['–'] ?? 0),
+            ], $kode);
+        }
+        ActivityLog::add('export_hasil', $data['quiz']['name'] . ' (jawaban per soal)');
+
+        return $this->response->download(
+            'jawaban_' . preg_replace('/[^A-Za-z0-9]+/', '_', $data['quiz']['name']) . '_' . date('Ymd_His') . '.xlsx',
+            Excel::build($headers, $rows)
+        );
+    }
+
+    /** Excel analisis butir soal (indeks kesukaran dan daya beda). */
+    public function exportAnalisis()
+    {
+        $data = $this->collect();
+        if (! $data['quiz']) {
+            return redirect()->to(site_url('hasil_ujian'))->with('error', 'Pilih quiz dulu.');
+        }
+        $an   = AnalisisSoal::analisis(AnalisisSoal::jawaban((int) $data['quiz']['id'], array_column($data['rows'], 'userid')));
+        $rows = [];
+        foreach ($an['butir'] as $b) {
+            $rows[] = [
+                $b['no'], $b['nama'], $b['teks'], $b['benar'], $b['salah'], $b['kosong'],
+                $b['p'] === null ? '' : number_format($b['p'], 2, ',', ''), $b['tingkat'],
+                $b['d'] === null ? '' : number_format($b['d'], 2, ',', ''), $b['kualitas'],
+            ];
+        }
+        ActivityLog::add('export_hasil', $data['quiz']['name'] . ' (analisis soal)');
+
+        return $this->response->download(
+            'analisis_' . preg_replace('/[^A-Za-z0-9]+/', '_', $data['quiz']['name']) . '_' . date('Ymd_His') . '.xlsx',
+            Excel::build(['no', 'nama_soal', 'teks_soal', 'benar', 'salah', 'kosong', 'indeks_kesukaran', 'tingkat', 'daya_beda', 'kualitas'], $rows)
         );
     }
 
@@ -79,7 +147,7 @@ class HasilUjian extends PanelController
         $data    = [
             'quiz' => null, 'quizzes' => [], 'rows' => [], 'stats' => null, 'error' => false,
             'quizId' => $quizId, 'ruangId' => $ruangId, 'kelas' => $kelas, 'tingkat' => Tingkat::dariRequest(),
-            'tab' => $this->request->getGet('tab') === 'cepat' ? 'cepat' : 'semua', 'param' => $param, 'cepat' => [], 'median' => null,
+            'tab' => in_array($this->request->getGet('tab'), ['cepat', 'analisis'], true) ? $this->request->getGet('tab') : 'semua', 'param' => $param, 'cepat' => [], 'median' => null,
         ];
 
         try {

@@ -13,14 +13,18 @@ class Absensi
     public const TIDAK_HADIR = 'tidak_hadir';
 
     /** Siswa di ruang beserta status absensinya pada tanggal itu (null = belum diabsen). */
-    public static function forRuang(int $ruangId, string $tanggal): array
+    public static function forRuang(int $ruangId, string $tanggal, ?int $sesiId = null): array
     {
-        return db_connect()->table('peserta p')
+        $builder = db_connect()->table('peserta p')
             ->select('p.id, p.nomor_peserta, p.nama, p.kelas, p.username, a.status, a.diblokir, a.dicatat_oleh, a.updated_at')
             ->join('absensi a', 'a.peserta_id = p.id AND a.tanggal = ' . db_connect()->escape($tanggal), 'left', false)
-            ->where('p.ruang_id', $ruangId)
-            ->orderBy('p.nomor_peserta')->orderBy('p.nama')
-            ->get()->getResultArray();
+            ->where('p.ruang_id', $ruangId);
+        if ($sesiId !== null) {
+            // Hanya siswa sesi itu (sesi peserta, atau sesi ruangnya bila kosong).
+            $builder->join('ruang r', 'r.id = p.ruang_id', 'left')->where('COALESCE(p.sesi_id, r.sesi_id)', $sesiId, false);
+        }
+
+        return $builder->orderBy('p.nomor_peserta')->orderBy('p.nama')->get()->getResultArray();
     }
 
     /**

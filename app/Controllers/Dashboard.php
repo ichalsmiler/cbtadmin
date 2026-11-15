@@ -20,14 +20,17 @@ class Dashboard extends PanelController
         } catch (\Throwable $e) {
             log_message('error', 'Token dashboard: ' . $e->getMessage());
         }
-        $kunci = ActiveTest::terkunciUntuk($this->myRuang());
-        $token = [
-            'mapel'   => $mapel,
-            'enabled' => ActiveTest::tokenEnabled(),
-            'menit'   => ActiveTest::tokenMinutes(),
-            'token'   => $kunci ? '' : ActiveTest::token(),
-            'next'    => $kunci ? 0 : ActiveTest::nextReleaseAt(),
-            'kunci'   => $kunci,
+        // Pengawas: token disembunyikan selama sesi belum diaktifkan, lalu sampai absensi ruangnya disimpan.
+        $sesiBelum = ActiveTest::sesiBelumAktifUntuk($this->myRuang());
+        $kunci     = $sesiBelum || ActiveTest::terkunciUntuk($this->myRuang());
+        $token     = [
+            'mapel'     => $mapel,
+            'enabled'   => ActiveTest::tokenEnabled(),
+            'menit'     => ActiveTest::tokenMinutes(),
+            'token'     => $kunci ? '' : ActiveTest::token(),
+            'next'      => $kunci ? 0 : ActiveTest::nextReleaseAt(),
+            'kunci'     => $kunci,
+            'sesiBelum' => $sesiBelum,
             'ringkas' => $this->isAdmin(),
         ];
 
@@ -36,6 +39,7 @@ class Dashboard extends PanelController
             'title'        => 'Dashboard',
             'isAdmin'      => $this->isAdmin(),
             'myRuang'      => $this->myRuang(),
+            'sesiAktif'    => ActiveTest::sesiAktif(),
             'stats'        => $this->collect(),
             'namaKegiatan' => Settings::get('nama_kegiatan'),
             'npsn'         => Settings::get('npsn', (string) env('cbt.npsn', '')),
@@ -62,10 +66,11 @@ class Dashboard extends PanelController
 
         try {
             if ($ruang !== null) {
-                // Pengawas ruang: nama ruangnya dan jumlah siswa di ruang itu.
-                $row           = db_connect()->table('ruang')->select('nama')->where('id', $ruang)->get()->getRowArray();
-                $data['ruang'] = (string) ($row['nama'] ?? '–');
-                $data['users'] = db_connect()->table('peserta')->where('ruang_id', $ruang)->countAllResults();
+                // Pengawas ruang: sesi yang sedang ujian dan jumlah siswa ruang ini di sesi itu
+                // (tanpa sesi aktif: semua siswa di ruang).
+                $sesi          = ActiveTest::sesiAktif();
+                $data['ruang'] = $sesi !== null ? 'Sesi ' . $sesi['nama'] : '–';
+                $data['users'] = count(Pengawas::usernamesInRuang($ruang, $sesi['id'] ?? null));
             } else {
                 $data['ruang'] = db_connect()->table('ruang')->countAllResults();
             }
@@ -76,7 +81,7 @@ class Dashboard extends PanelController
         try {
             // Hitungan submit mengikuti tes aktif (Status Test); tanpa tes aktif, semua quiz.
             $catId   = ActiveTest::categoryId() ?: null;
-            $userIds = $ruang !== null ? Pengawas::moodleIdsInRuang($ruang) : null;
+            $userIds = $ruang !== null ? Pengawas::moodleIdsInRuang($ruang, ActiveTest::sesiId() ?: null) : null;
             if ($ruang === null) {
                 $minutes       = max(1, (int) Settings::get('active_minutes', '5'));
                 $data['users'] = Moodle::totalUsers();

@@ -237,12 +237,33 @@
     };
     var tingkatSel = document.getElementById('fTingkat');
     var kelasSel = document.getElementById('fKelas');
+    // Ruang yang opsinya ber-data-kelas (Data CBTAdmin): hanya ruang berisi kelas/tingkatan terpilih.
+    var ruangSel = document.getElementById('fRuang');
+    // awal: saat halaman dimuat, ruang yang sedang terpilih tetap ditampilkan (sudah dipakai server).
+    var saringRuang = function (awal) {
+        if (!ruangSel || ruangSel.disabled || !ruangSel.querySelector('option[data-kelas]')) { return; }
+        var sejenis = function (el) { return el && el.form === ruangSel.form; };
+        var kelas = sejenis(kelasSel) && !kelasSel.disabled && kelasSel.value !== '__semua' ? kelasSel.value : '';
+        var tingkat = sejenis(tingkatSel) ? tingkatSel.value : '';
+        Array.prototype.forEach.call(ruangSel.options, function (opt) {
+            if (!opt.hasAttribute('data-kelas')) { return; }
+            var isi = opt.getAttribute('data-kelas').split('|').filter(Boolean);
+            var tampil = (awal === true && opt.selected) || (kelas !== '' ? isi.indexOf(kelas) !== -1
+                : tingkat === '' || isi.some(function (k) { return tingkatOf(k) === tingkat; }));
+            opt.hidden = !tampil;
+            opt.disabled = !tampil;
+        });
+        if (ruangSel.selectedOptions[0] && ruangSel.selectedOptions[0].hidden) { ruangSel.selectedIndex = 0; }
+    };
     if (tingkatSel && kelasSel && tingkatSel.form === kelasSel.form) {
         saringKelas(tingkatSel, kelasSel, false);
-        document.addEventListener('change', function (e) {
-            if (e.target === tingkatSel) { saringKelas(tingkatSel, kelasSel, true); }
-        }, true);
     }
+    saringRuang(true);
+    document.addEventListener('change', function (e) {
+        if (!e.target || (e.target !== tingkatSel && e.target !== kelasSel)) { return; }
+        if (e.target === tingkatSel && kelasSel && tingkatSel.form === kelasSel.form) { saringKelas(tingkatSel, kelasSel, true); }
+        saringRuang();
+    }, true);
 
     // ---------------------------------------------------------------- Lain-lain
     var updateButton = document.getElementById('btnCekUpdate');

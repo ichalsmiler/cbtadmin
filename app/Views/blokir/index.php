@@ -18,15 +18,15 @@
     <div class="card-header d-flex flex-wrap gap-2 align-items-center">
         <?php if (! $isAdmin): ?><span class="fw-semibold">Siswa ruang <?= esc($ruangList[0]['nama'] ?? '') ?></span><?php endif ?>
             <form method="get" action="<?= site_url('blokir_siswa') ?>" class="d-flex flex-wrap gap-2 align-items-center">
+                <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'label' => false]) ?>
                 <?php if ($isAdmin): ?>
-                <select class="form-select form-select-sm w-auto" name="ruang" onchange="this.form.submit()" aria-label="Ruang">
+                <select class="form-select form-select-sm w-auto" id="fRuang" name="ruang" onchange="this.form.submit()" aria-label="Ruang">
                     <option value="">Semua ruang</option>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= $ruangId === (int) $r['id'] ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= $ruangId === (int) $r['id'] ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
                 <?php endif ?>
-                <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'label' => false]) ?>
                 <div class="form-check form-switch mb-0">
                     <input class="form-check-input" type="checkbox" role="switch" id="fAktif" name="aktif" value="1" <?= $hanyaAktif ? 'checked' : '' ?> onchange="this.form.submit()">
                     <label class="form-check-label small" for="fAktif">Hanya yang diblokir</label>

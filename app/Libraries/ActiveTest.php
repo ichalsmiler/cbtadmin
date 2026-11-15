@@ -20,9 +20,67 @@ class ActiveTest
 
     public const TOKEN_LENGTH = 6;
 
+    /** Password bawaan semua quiz yang tidak termasuk tes aktif (diganti token saat tesnya diaktifkan). */
+    public const DEFAULT_PASSWORD = '123456';
+
     public static function categoryId(): int
     {
         return (int) Settings::get('tes_kategori', '0');
+    }
+
+    /** Sesi yang sedang ujian (wajib dipilih saat mengaktifkan tes), 0 = belum dipilih. */
+    public static function sesiId(): int
+    {
+        return (int) Settings::get('sesi_aktif', '0');
+    }
+
+    /**
+     * Daftar sesi beserta jumlah peserta dan tingkatannya (sesi peserta, atau sesi ruangnya bila kosong).
+     *
+     * @return list<array{id:int, nama:string, jumlah:int, tingkat:string, label:string}>
+     */
+    public static function sesiList(): array
+    {
+        $db    = db_connect();
+        $hasil = [];
+        foreach ($db->table('sesi')->orderBy('nama')->get()->getResultArray() as $s) {
+            $kelas = array_column($db->table('peserta p')->select('p.kelas')
+                ->join('ruang r', 'r.id = p.ruang_id', 'left')
+                ->where('COALESCE(p.sesi_id, r.sesi_id)', (int) $s['id'], false)
+                ->get()->getResultArray(), 'kelas');
+            $tingkat = array_values(array_intersect(Tingkat::LIST, array_unique(array_map([Tingkat::class, 'of'], $kelas))));
+            $hasil[] = [
+                'id'      => (int) $s['id'],
+                'nama'    => (string) $s['nama'],
+                'jumlah'  => count($kelas),
+                'tingkat' => implode('/', $tingkat),
+                'label'   => 'Sesi ' . $s['nama'] . ($tingkat !== [] ? ' (Kelas ' . implode('/', $tingkat) . ')' : ''),
+            ];
+        }
+
+        return $hasil;
+    }
+
+    /** Token disembunyikan dari pengawas ($ruangId bukan null) selama belum ada sesi yang diaktifkan. */
+    public static function sesiBelumAktifUntuk(?int $ruangId): bool
+    {
+        return $ruangId !== null && self::sesiAktif() === null;
+    }
+
+    /** Sesi aktif (lihat sesiList), null bila belum dipilih atau sesinya sudah dihapus. */
+    public static function sesiAktif(): ?array
+    {
+        $id = self::sesiId();
+        if ($id === 0) {
+            return null;
+        }
+        foreach (self::sesiList() as $s) {
+            if ($s['id'] === $id) {
+                return $s;
+            }
+        }
+
+        return null;
     }
 
     public static function tokenEnabled(): bool
@@ -78,7 +136,7 @@ class ActiveTest
 
     /**
      * Token disembunyikan dari pengawas ruang ini sampai absensi ruangnya hari ini disimpan
-     * (minimal satu siswa, karena absensi bisa per tingkatan). Admin ($ruangId null) tidak dikunci.
+     * (minimal satu siswa sesi aktif). Admin ($ruangId null) tidak dikunci.
      */
     public static function terkunciUntuk(?int $ruangId): bool
     {
@@ -86,7 +144,14 @@ class ActiveTest
             return false;
         }
 
-        return db_connect()->table('absensi')->where('ruang_id', $ruangId)->where('tanggal', date('Y-m-d'))->countAllResults() === 0;
+        $builder = db_connect()->table('absensi a')->where('a.ruang_id', $ruangId)->where('a.tanggal', date('Y-m-d'));
+        if (($sesi = self::sesiId()) > 0) {
+            // Absensi sesi aktif: siswa sesi sebelumnya yang sudah diabsen tidak membuka token sesi ini.
+            $builder->join('peserta p', 'p.id = a.peserta_id')->join('ruang r', 'r.id = p.ruang_id', 'left')
+                ->where('COALESCE(p.sesi_id, r.sesi_id)', $sesi, false);
+        }
+
+        return $builder->countAllResults() === 0;
     }
 
     public static function newToken(): string
@@ -144,13 +209,45 @@ class ActiveTest
     }
 
     /**
-     * Pastikan semua quiz kategori aktif memakai token yang berlaku,
-     * termasuk quiz yang baru dibuat setelah token di-release.
+     * Quiz di luar kategori aktif (termasuk quiz baru dan tes yang sudah tidak aktif) dikunci
+     * dengan password bawaan, supaya hanya tes yang diaktifkan CBT Admin yang bisa dikerjakan.
+     *
+     * @return int jumlah quiz yang diubah
+     */
+    public static function applyDefault(): int
+    {
+        $categoryId = self::categoryId();
+        $aktif      = $categoryId > 0 ? array_map('intval', array_column(Moodle::quizzes($categoryId), 'id')) : [];
+        $ids        = [];
+        foreach (Moodle::quizzes() as $quiz) {
+            if ((string) $quiz['password'] !== self::DEFAULT_PASSWORD && ! in_array((int) $quiz['id'], $aktif, true)) {
+                $ids[] = (int) $quiz['id'];
+            }
+        }
+        if ($ids === []) {
+            return 0;
+        }
+
+        $failed = array_filter(
+            MoodleBridge::call('quiz_password', ['quizids' => $ids, 'password' => self::DEFAULT_PASSWORD]),
+            static fn ($item) => isset($item['error'])
+        );
+        if ($failed !== []) {
+            throw new \RuntimeException('Password bawaan gagal dipasang di ' . count($failed) . ' quiz: ' . reset($failed)['error']);
+        }
+
+        return count($ids);
+    }
+
+    /**
+     * Pastikan quiz di luar tes aktif memakai password bawaan, dan semua quiz kategori aktif memakai
+     * token yang berlaku (termasuk quiz yang baru dibuat setelah token di-release).
      */
     public static function sync(): int
     {
         $token = self::token();
+        $count = self::applyDefault();
 
-        return self::tokenEnabled() && $token !== '' ? self::apply($token) : 0;
+        return $count + (self::tokenEnabled() && $token !== '' ? self::apply($token) : 0);
     }
 }

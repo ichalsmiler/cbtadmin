@@ -33,3 +33,40 @@
 .login-form-forgotpassword,
 .login-container .login-divider,
 .login-container button[data-modal-title-str*="cookiesenabled"] { display: none !important; }
+
+/* CBT: laci blok kanan disembunyikan untuk siswa di semua halaman (kelas cbt-siswa dari local_cbtujian)
+   dan untuk siapa pun saat mengerjakan ujian (navigasi nomor soal ada di bawah soal) */
+body.cbt-siswa #theme_boost-drawers-blocks,
+body.cbt-siswa .drawer-right-toggle,
+#page-mod-quiz-attempt #theme_boost-drawers-blocks,
+#page-mod-quiz-attempt .drawer-right-toggle,
+#page-mod-quiz-summary #theme_boost-drawers-blocks,
+#page-mod-quiz-summary .drawer-right-toggle { display: none !important; }
+body.cbt-siswa #page.drawers.show-drawer-right,
+#page-mod-quiz-attempt #page.drawers.show-drawer-right,
+#page-mod-quiz-summary #page.drawers.show-drawer-right { margin-right: 0 !important; }
+
+/* CBT: tombol Kembali sebaris dengan Sisa waktu */
+#page-mod-quiz-attempt .tertiary-navigation { float: left; margin: 0 1rem 0 0; padding-top: 0; }
+#page-mod-quiz-attempt .tertiary-navigation .row { margin: 0; }
+#page-mod-quiz-attempt .tertiary-navigation .navitem { margin-bottom: .5rem; }
+#page-mod-quiz-attempt #responseform,
+#page-mod-quiz-attempt .alert { clear: both; }
+
+/* CBT: selesaikan kuis hanya lewat tombol di soal terakhir (tautan di navigasi soal disembunyikan) */
+#page-mod-quiz-attempt .endtestlink { display: none !important; }
+
+/* CBT: navigasi nomor soal di bawah soal (semua ukuran layar) */
+#cbt-nav-soal { clear: both; margin: 1rem 0; padding: .5rem; border: 1px solid #dee2e6; border-radius: .5rem; }
+#cbt-nav-soal .cbt-nav-judul { font-weight: 600; margin-bottom: .25rem; }
+#cbt-nav-soal .qn_buttons { display: flex; flex-wrap: wrap; gap: .25rem; margin: 0; }
+
+/* CBT: tanpa kotak info soal (nomor, status, poin maks, tandai soal) saat mengerjakan; soal selebar halaman */
+#page-mod-quiz-attempt .que .info { display: none !important; }
+#page-mod-quiz-attempt .que .content { margin-left: 0 !important; }
+
+/* CBT: di ponsel, menu Daftar Ujian langsung tampil di bar atas (tanpa tombol garis tiga) untuk siswa */
+@media (max-width: 767.98px) {
+    body.cbt-siswa .navbar .primary-navigation { display: block !important; }
+    body.cbt-siswa .navbar .navbar-toggler[data-target="theme_boost-drawers-primary"] { display: none !important; }
+}

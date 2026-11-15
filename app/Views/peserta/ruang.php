@@ -8,18 +8,18 @@
     </div>
     <div class="card-body">
         <form class="d-flex flex-wrap gap-3 align-items-end mb-3 dt-toolbar" id="pesertaToolbar" method="get" action="<?= site_url('peserta_ruang') ?>">
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
             <?php if (! $lockRuang): ?>
                 <div>
                     <label class="form-label small mb-1" for="fRuang">Ruang</label>
                     <select class="form-select form-select-sm" id="fRuang" name="ruang" onchange="this.form.submit()">
                         <option value="">Pilih ruang</option>
                         <?php foreach ($ruangList as $r): ?>
-                            <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                            <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                         <?php endforeach ?>
                     </select>
                 </div>
             <?php endif ?>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
         <?php if (! $ruang): ?>
             <p class="text-muted mb-0">Pilih ruang untuk melihat pesertanya.</p>

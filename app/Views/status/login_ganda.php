@@ -22,16 +22,16 @@
                 <label class="form-label small mb-1" for="fTanggal">Tanggal</label>
                 <input class="form-control form-control-sm" type="date" id="fTanggal" name="tanggal" value="<?= esc($tanggal, 'attr') ?>" onchange="this.form.submit()">
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
             <div>
                 <label class="form-label small mb-1" for="fRuang">Ruang</label>
                 <select class="form-select form-select-sm" id="fRuang" name="ruang" onchange="this.form.submit()" <?= $lockRuang ? 'disabled' : '' ?>>
                     <?php if (! $lockRuang): ?><option value="">Semua ruang</option><?php endif ?>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
     </div>
 </div>

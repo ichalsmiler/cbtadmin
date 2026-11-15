@@ -30,7 +30,7 @@ class Dokumen extends PanelController
 
         return $this->render('dokumen/cetak', [
             'title'     => 'Kartu / Daftar Hadir',
-            'ruangList' => $db->query('SELECT r.id, r.nama, (SELECT COUNT(*) FROM peserta p WHERE p.ruang_id = r.id) AS jumlah FROM ruang r ORDER BY LENGTH(r.nama), r.nama')->getResultArray(),
+            'ruangList' => $db->query('SELECT r.id, r.nama, (SELECT COUNT(*) FROM peserta p WHERE p.ruang_id = r.id) AS jumlah, (SELECT GROUP_CONCAT(DISTINCT p.kelas ORDER BY p.kelas SEPARATOR \'|\') FROM peserta p WHERE p.ruang_id = r.id) AS kelas FROM ruang r ORDER BY LENGTH(r.nama), r.nama')->getResultArray(),
             'kelasList' => $db->query("SELECT kelas, COUNT(*) AS jumlah FROM peserta GROUP BY kelas ORDER BY kelas")->getResultArray(),
             'sesiList'  => $db->table('sesi')->orderBy('nama')->get()->getResultArray(),
             'quizzes'   => $quizzes,

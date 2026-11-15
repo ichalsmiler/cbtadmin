@@ -13,6 +13,7 @@
                 <label class="form-label small mb-1" for="fCari">Cari peserta</label>
                 <input class="form-control form-control-sm" id="fCari" name="cari" value="<?= esc($cari) ?>" placeholder="username atau nama">
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <div>
                 <label class="form-label small mb-1" for="fRuang">Ruang</label>
                 <select class="form-select form-select-sm" id="fRuang" name="ruang" <?= $lockRuang ? 'disabled' : '' ?>>
@@ -21,11 +22,10 @@
                         <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
                     <?php endif ?>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-outline-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
             <?php if ($cari !== '' || $tingkat !== '' || ($ruangId !== '' && ! $lockRuang)): ?>
                 <a class="btn btn-link btn-sm" href="<?= site_url('reset_login') ?>">Hapus filter</a>

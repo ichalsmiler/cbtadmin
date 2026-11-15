@@ -59,6 +59,10 @@ class StatusTes extends PanelController
             'tokenMinutes' => ActiveTest::tokenMinutes(),
             'token'        => ActiveTest::token(),
             'nextRelease'  => ActiveTest::nextReleaseAt(),
+            'sesiList'     => ActiveTest::sesiList(),
+            'sesiAktif'    => ActiveTest::sesiId(),
+            // Pilihan sesi ikut terbawa saat ganti tes (halaman dimuat ulang dengan ?kat=&sesi=).
+            'sesiPilih'    => $this->request->getGet('sesi') !== null ? (int) $this->request->getGet('sesi') : ActiveTest::sesiId(),
         ]);
     }
 
@@ -71,8 +75,9 @@ class StatusTes extends PanelController
     /** Token yang berlaku, untuk diperbarui halaman tanpa muat ulang. */
     public function token()
     {
-        if (ActiveTest::terkunciUntuk($this->myRuang())) {
-            return $this->response->setJSON(['token' => '', 'enabled' => true, 'kunci' => true, 'next' => 0, 'now' => time()]);
+        $sesiBelum = ActiveTest::sesiBelumAktifUntuk($this->myRuang());
+        if ($sesiBelum || ActiveTest::terkunciUntuk($this->myRuang())) {
+            return $this->response->setJSON(['token' => '', 'enabled' => true, 'kunci' => true, 'sesiBelum' => $sesiBelum, 'next' => 0, 'now' => time()]);
         }
 
         return $this->response->setJSON([
@@ -88,9 +93,21 @@ class StatusTes extends PanelController
      */
     public function kategori()
     {
-        $catId = (int) $this->request->getPost('kat_id');
-        $back  = site_url('status_tes') . '?kat=' . $catId;
-        $name  = null;
+        $catId  = (int) $this->request->getPost('kat_id');
+        $sesiId = (int) $this->request->getPost('sesi_id');
+        $back   = site_url('status_tes') . '?kat=' . $catId . '&sesi=' . $sesiId;
+        $name   = null;
+
+        // Ujian hanya bisa diaktifkan untuk satu sesi yang dipilih.
+        $sesi = null;
+        foreach (ActiveTest::sesiList() as $s) {
+            if ($s['id'] === $sesiId) {
+                $sesi = $s;
+            }
+        }
+        if ($sesi === null) {
+            return redirect()->to($back)->with('error', 'Pilih sesi terlebih dahulu sebelum mengaktifkan ujian.');
+        }
         try {
             foreach (Moodle::categories() as $c) {
                 if ((int) $c['id'] === $catId) {
@@ -147,10 +164,16 @@ class StatusTes extends PanelController
         }
 
         Settings::set('tes_kategori', (string) $catId);
-        $message = 'Tes aktif: ' . $name . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka; course lain disembunyikan'
+        Settings::set('sesi_aktif', (string) $sesiId);
+        $message = 'Tes aktif: ' . $name . ' untuk ' . $sesi['label'] . ', ' . count($opened) . ' dari ' . count($courses) . ' mapel dibuka; course lain disembunyikan'
             . ($hidden > 0 ? ' (' . $hidden . ' baru disembunyikan).' : '.')
             . ($catChanged !== [] ? ' ' . count($catChanged) . ' kategori lain disembunyikan.' : '');
         try {
+            // Quiz tes lain (termasuk tes yang sebelumnya aktif) kembali ke password bawaan.
+            $dikunci = ActiveTest::applyDefault();
+            if ($dikunci > 0) {
+                $message .= ' ' . $dikunci . ' quiz tes lain dikunci dengan password bawaan.';
+            }
             if (ActiveTest::tokenEnabled()) {
                 if (ActiveTest::token() === '') {
                     $message .= ' Token: ' . ActiveTest::release() . '.';
@@ -162,7 +185,7 @@ class StatusTes extends PanelController
         } catch (\Throwable $e) {
             $message .= ' Tetapi token gagal dipasang: ' . $e->getMessage();
         }
-        ActivityLog::add('tes_aktif', $name . ' (kategori ' . $catId . '); mapel aktif: ' . implode(', ', $opened));
+        ActivityLog::add('tes_aktif', $name . ' (kategori ' . $catId . '), ' . $sesi['label'] . '; mapel aktif: ' . implode(', ', $opened));
 
         return redirect()->to(site_url('status_tes'))->with('success', $message);
     }

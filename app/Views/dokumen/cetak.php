@@ -17,13 +17,16 @@
                         </div>
                     </div>
                     <div class="row g-3">
+                        <div class="col-sm-6">
+                            <?= view('partials/filter_tingkat', ['tingkat' => \App\Libraries\Tingkat::dariRequest(), 'size' => '', 'autoSubmit' => false]) ?>
+                        </div>
                         <div class="col-sm-6" data-per="ruang">
                             <label class="form-label" for="fRuang">Ruang</label>
                             <select class="form-select" id="fRuang" name="ruang">
                                 <option value="">Semua ruang (<?= (int) $total ?> peserta)</option>
                                 <option value="0">(tanpa ruang)</option>
                                 <?php foreach ($ruangList as $r): ?>
-                                    <option value="<?= (int) $r['id'] ?>"><?= esc($r['nama']) ?> (<?= (int) $r['jumlah'] ?> peserta)</option>
+                                    <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>"><?= esc($r['nama']) ?> (<?= (int) $r['jumlah'] ?> peserta)</option>
                                 <?php endforeach ?>
                             </select>
                         </div>
@@ -35,9 +38,6 @@
                                     <option value="<?= esc($k['kelas'], 'attr') ?>"><?= esc($k['kelas'] !== '' ? $k['kelas'] : '(tanpa kelas)') ?> (<?= (int) $k['jumlah'] ?> peserta)</option>
                                 <?php endforeach ?>
                             </select>
-                        </div>
-                        <div class="col-sm-6">
-                            <?= view('partials/filter_tingkat', ['tingkat' => \App\Libraries\Tingkat::dariRequest(), 'size' => '', 'autoSubmit' => false]) ?>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label" for="fSesi">Sesi</label>

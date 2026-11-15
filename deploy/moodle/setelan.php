@@ -61,17 +61,55 @@ $zona = trim((string) @file_get_contents('/etc/timezone')) ?: date_default_timez
 $setel('timezone', $zona);
 $setel('forcetimezone', $zona);
 
-// Teks kustom: Daftar Ujian, sapaan nama - kelas, pesan sesi berakhir.
+// Teks kustom: Daftar Ujian, sapaan nama - kelas, pesan sesi berakhir (deploy/moodle/lang/*.php).
+// Bahasa Indonesia: kata "kuis" di teks quiz (quiz, quiz_*, quizaccess_*, moodle) diganti "ujian";
+// teks kustom ditambahkan sesudahnya sehingga tetap menang.
+$kuisJadiUjian = static function (string $file): string {
+    $string = [];
+    include $file;
+    $isi = '';
+    foreach ($string as $id => $teks) {
+        if (stripos((string) $teks, 'kuis') === false) {
+            continue;
+        }
+        $baru = preg_replace_callback('/kuis/i', static fn ($m) => match ($m[0]) {
+            'KUIS'  => 'UJIAN',
+            'Kuis'  => 'Ujian',
+            default => 'ujian',
+        }, (string) $teks);
+        $isi .= '$string[' . var_export($id, true) . '] = ' . var_export($baru, true) . ";\n";
+    }
+
+    return $isi;
+};
+$kustom = [];
+foreach (glob($dir . '/lang/*.php') as $sumber) {
+    $kustom[basename($sumber)] = preg_replace('/^<\?php\s*/', '', file_get_contents($sumber));
+}
 foreach (['id_local', 'en_local'] as $lokal) {
     $tujuan = $CFG->dataroot . '/lang/' . $lokal;
     if (! is_dir($tujuan)) {
         mkdir($tujuan, $CFG->directorypermissions, true);
     }
-    foreach (glob($dir . '/lang/*.php') as $sumber) {
-        $file = $tujuan . '/' . basename($sumber);
-        if (! is_file($file) || file_get_contents($file) !== file_get_contents($sumber)) {
-            copy($sumber, $file);
-            $catatan("teks kustom lang/$lokal/" . basename($sumber));
+    $isiBaru = [];
+    if ($lokal === 'id_local') {
+        $paket = $CFG->dataroot . '/lang/id/';
+        foreach (array_merge([$paket . 'quiz.php', $paket . 'moodle.php'], glob($paket . 'quiz_*.php'), glob($paket . 'quizaccess_*.php')) as $f) {
+            if (is_file($f) && ($isi = $kuisJadiUjian($f)) !== '') {
+                $isiBaru[basename($f)] = "// Dibuat otomatis oleh setelan.php: kata kuis diganti ujian.\n" . $isi;
+            }
+        }
+    }
+    foreach ($kustom as $nama => $isi) {
+        $isiBaru[$nama] = ($isiBaru[$nama] ?? '') . $isi;
+    }
+    foreach ($isiBaru as $nama => $isi) {
+        $isi  = "<?php\n" . $isi;
+        $file = $tujuan . '/' . $nama;
+        if (! is_file($file) || file_get_contents($file) !== $isi) {
+            file_put_contents($file, $isi);
+            chmod($file, $CFG->filepermissions);
+            $catatan("teks kustom lang/$lokal/$nama");
             $ubah++;
         }
     }
@@ -173,6 +211,16 @@ $setel('reviewspecificfeedback', 0, 'quiz');
 $setel('reviewgeneralfeedback', 0, 'quiz');
 $setel('reviewrightanswer', 0, 'quiz');
 $setel('reviewoverallfeedback', 0, 'quiz');
+
+// Nilai quiz skala 0–100 (Maximum grade = 100), apa pun Total of marks soalnya; quiz baru juga bawaan 100.
+// Quiz lama diubah lewat API Moodle supaya nilai attempt dan gradebook ikut diskalakan ulang.
+$setel('maximumgrade', 100, 'quiz');
+require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+foreach ($DB->get_records_select('quiz', 'grade <> 100', null, '', 'id, name') as $q) {
+    \mod_quiz\quiz_settings::create($q->id)->get_grade_calculator()->update_quiz_maximum_grade(100);
+    $catatan("quiz '{$q->name}': nilai maksimum -> 100");
+    $ubah++;
+}
 
 // Guru/manager tidak bisa memberi kesempatan kedua (override percobaan, hapus attempt); admin tetap bisa.
 foreach (['editingteacher', 'manager'] as $short) {

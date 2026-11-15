@@ -152,7 +152,9 @@ class QuizStatus
             'quiz_name'  => $quiz['name'],
             'userid'     => (int) $user['id'],
             'username'   => $user['username'],
-            'nama'       => trim($user['firstname'] . ' ' . $user['lastname']),
+            // Nama depan saja: last name Moodle berisi kelas, yang sudah punya kolom sendiri.
+            'nama'       => trim((string) $user['firstname']) ?: trim($user['firstname'] . ' ' . $user['lastname']),
+            'lastname'   => trim((string) $user['lastname']),
             'status'     => self::statusOf($state),
             'overdue'    => $state === 'overdue',
             'timestart'  => (int) ($attempt['timestart'] ?? 0),
@@ -173,7 +175,7 @@ class QuizStatus
         foreach ($rows as &$row) {
             $info                 = $panel[$row['username']] ?? null;
             $row['nomor_peserta'] = $info['nomor_peserta'] ?? '';
-            $row['kelas']         = $info['kelas'] ?? '';
+            $row['kelas']         = $info['kelas'] ?? $row['lastname'];  // bukan peserta panel: kelas = last name Moodle
             $row['ruang_id']      = $info['ruang_id'] ?? null;
             $row['ruang']         = $info['ruang_nama'] ?? null;
         }

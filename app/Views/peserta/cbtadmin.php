@@ -6,6 +6,7 @@
 <div class="card mb-3">
     <div class="card-body d-flex flex-wrap gap-2 align-items-end">
         <form class="d-flex flex-wrap gap-2 align-items-end" method="get" action="<?= site_url('daftar_peserta/cbtadmin') ?>">
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
             <div>
                 <label class="form-label small mb-1" for="fKelas">Kelas</label>
                 <select class="form-select form-select-sm" id="fKelas" name="kelas" onchange="this.form.submit()">
@@ -21,11 +22,10 @@
                     <option value="">Semua ruang</option>
                     <option value="0" <?= $filterRuang === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $filterRuang ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $filterRuang ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
         <div class="ms-auto d-flex flex-wrap gap-2">
             <button class="btn btn-primary btn-sm" type="button" data-fill-modal="#pesertaModal"
@@ -43,22 +43,6 @@
     <form method="post" action="<?= site_url('daftar_peserta/cbtadmin/massal') ?>" id="bulkForm" data-bulk>
         <?= csrf_field() ?>
         <div class="card-header d-flex flex-wrap gap-2 align-items-center">
-            <span class="small text-muted me-1">Untuk yang dicentang:</span>
-            <select class="form-select form-select-sm w-auto" name="ruang_id" aria-label="Ruang">
-                <option value="">Ruang: tidak diubah</option>
-                <option value="0">Kosongkan ruang</option>
-                <?php foreach ($ruangList as $r): ?>
-                    <option value="<?= (int) $r['id'] ?>"><?= esc($r['nama']) ?></option>
-                <?php endforeach ?>
-            </select>
-            <select class="form-select form-select-sm w-auto" name="sesi_id" aria-label="Sesi">
-                <option value="">Sesi: tidak diubah</option>
-                <option value="0">Kosongkan sesi</option>
-                <?php foreach ($sesiList as $s): ?>
-                    <option value="<?= (int) $s['id'] ?>"><?= esc($s['nama']) ?></option>
-                <?php endforeach ?>
-            </select>
-            <button class="btn btn-outline-primary btn-sm" type="submit" name="aksi" value="atur">Terapkan</button>
             <button class="btn btn-outline-danger btn-sm ms-auto" type="submit" name="aksi" value="hapus"
                     data-confirm-button="Hapus semua peserta yang dicentang dari Data CBTAdmin? Akun Moodle mereka tidak ikut terhapus.">
                 <i class="bi bi-trash me-1"></i>Hapus yang dicentang

@@ -130,29 +130,10 @@ class Peserta extends PanelController
             return redirect()->back()->with('error', 'Belum ada peserta yang dicentang.');
         }
 
-        $db = db_connect();
-        if ($this->request->getPost('aksi') === 'hapus') {
-            $db->table('peserta')->whereIn('id', $ids)->delete();
-            ActivityLog::add('hapus_peserta_massal', count($ids) . ' peserta');
+        db_connect()->table('peserta')->whereIn('id', $ids)->delete();
+        ActivityLog::add('hapus_peserta_massal', count($ids) . ' peserta');
 
-            return redirect()->back()->with('success', count($ids) . ' peserta dihapus dari Data CBTAdmin.');
-        }
-
-        // Nilai kosong = tidak diubah, "0" = dikosongkan.
-        $data = [];
-        foreach (['ruang_id', 'sesi_id'] as $field) {
-            $value = (string) $this->request->getPost($field);
-            if ($value !== '') {
-                $data[$field] = (int) $value > 0 ? (int) $value : null;
-            }
-        }
-        if ($data === []) {
-            return redirect()->back()->with('error', 'Pilih ruang atau sesi yang akan diterapkan.');
-        }
-        $db->table('peserta')->whereIn('id', $ids)->update($data + ['updated_at' => date('Y-m-d H:i:s')]);
-        ActivityLog::add('atur_ruang_sesi', count($ids) . ' peserta');
-
-        return redirect()->back()->with('success', 'Ruang/sesi diterapkan ke ' . count($ids) . ' peserta.');
+        return redirect()->back()->with('success', count($ids) . ' peserta dihapus dari Data CBTAdmin.');
     }
 
     /** Hapus semua Data CBTAdmin (harus mengetik HAPUS). Akun Moodle tidak ikut terhapus. */

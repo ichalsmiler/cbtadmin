@@ -10,8 +10,9 @@ $cards = $isAdmin ? [
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ] : [
-    ['ruang', $myRuang !== null ? 'No Ruang' : 'Total Ruang', 'teal', 'door-open', null],
-    ['users', $myRuang !== null ? 'Siswa di Ruang' : 'Total Siswa', 'yellow', 'people', 'peserta_ruang'],
+    // Pengawas: sesi yang sedang ujian (mis. "Sesi Aktif (Kelas X)") dan jumlah siswa ruangnya di sesi itu.
+    ['ruang', $myRuang !== null ? 'Sesi Aktif' . ($sesiAktif !== null && $sesiAktif['tingkat'] !== '' ? ' (Kelas ' . $sesiAktif['tingkat'] . ')' : '') : 'Total Ruang', 'teal', 'calendar-check', null],
+    ['users', $myRuang !== null ? ($sesiAktif !== null ? 'Siswa di Ruang (sesi aktif)' : 'Siswa di Ruang') : 'Total Siswa', 'yellow', 'people', 'peserta_ruang'],
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ];
@@ -26,6 +27,20 @@ $bars = $isAdmin ? [
     <div class="alert alert-warning alert-dismissible fade show" role="alert">
         Nama Kegiatan belum diatur (<a class="alert-link" href="<?= site_url('tools') ?>">Tools → Nama Kegiatan</a>).
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+<?php endif ?>
+
+<?php if ($sesiAktif !== null): ?>
+    <div class="alert alert-info d-flex flex-wrap align-items-center gap-2 py-2" role="status">
+        <i class="bi bi-calendar-check"></i>
+        <span>Sesi aktif: <strong><?= esc($sesiAktif['label']) ?></strong><?php if ($isAdmin): ?> · <?= number_format($sesiAktif['jumlah'], 0, ',', '.') ?> peserta<?php endif ?></span>
+        <?php if ($isAdmin): ?><a class="alert-link ms-auto small" href="<?= site_url('status_tes') ?>">Ganti sesi</a><?php endif ?>
+    </div>
+<?php else: ?>
+    <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 py-2" role="status">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span>Belum ada sesi yang aktif.</span>
+        <?php if ($isAdmin): ?><a class="alert-link ms-auto small" href="<?= site_url('status_tes') ?>">Aktifkan di Status Test</a><?php endif ?>
     </div>
 <?php endif ?>
 

@@ -26,7 +26,11 @@
         <div class="text-muted mb-2">
             <?= $token['mapel'] !== '' ? 'Token tes <strong>' . esc($token['mapel']) . '</strong>' : 'Belum ada tes aktif' ?>
         </div>
-        <?php if ($token['kunci']): ?>
+        <?php if (! empty($token['sesiBelum'])): ?>
+            <div class="token-display text-muted"><i class="bi bi-hourglass-split"></i></div>
+            <p class="mt-2 mb-0 fw-semibold text-warning-emphasis">Sesi belum diaktifkan oleh proktor.</p>
+            <p class="small text-muted mt-1 mb-0">Token akan muncul setelah proktor mengaktifkan sesi ujian. Halaman ini diperbarui otomatis.</p>
+        <?php elseif ($token['kunci']): ?>
             <div class="token-display text-muted"><i class="bi bi-lock-fill"></i></div>
             <p class="mt-2 mb-3">Token muncul setelah absensi siswa ruang ini hari ini disimpan.</p>
             <a class="btn btn-primary" href="<?= site_url('kehadiran') ?>"><i class="bi bi-clipboard-check me-1"></i>Isi Laporan Kehadiran</a>
@@ -47,6 +51,20 @@
         <?php endif ?>
     </div>
 </div>
+<?php endif ?>
+<?php if (! empty($token['sesiBelum'])): ?>
+<script>
+(function () {
+    'use strict';
+    // Sesi belum aktif: muat ulang halaman begitu proktor mengaktifkan sesi.
+    setInterval(function () {
+        fetch('<?= site_url('status_tes/token') ?>', { headers: { 'X-Requested-With': 'XMLHttpRequest' }, credentials: 'same-origin' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (d) { if (d && !d.sesiBelum) { window.location.reload(); } })
+            .catch(function () { /* coba lagi di putaran berikutnya */ });
+    }, 15000);
+})();
+</script>
 <?php endif ?>
 <?php if (! $token['kunci'] && $token['enabled']): ?>
 <script>

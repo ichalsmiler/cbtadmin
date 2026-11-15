@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\Absensi;
 use App\Libraries\ActivityLog;
 use App\Libraries\Excel;
+use App\Libraries\ActiveTest;
 use App\Libraries\Tingkat;
 
 /**
@@ -29,10 +30,20 @@ class Kehadiran extends PanelController
             return $this->render('kehadiran/index', ['title' => 'Laporan Kehadiran', 'ruang' => null, 'rows' => [], 'tanggal' => $tanggal, 'isAdmin' => false]);
         }
 
-        $ruang   = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
-        $tingkat = Tingkat::dariRequest();
-        // Filter tingkatan: simpan hanya mengubah siswa yang tampil, jadi absen bisa per tingkatan.
-        $rows = $ruang ? array_values(array_filter(Absensi::forRuang($ruangId, $tanggal), static fn ($r) => Tingkat::cocok((string) $r['kelas'], $tingkat))) : [];
+        $ruang = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
+        // Hanya siswa sesi aktif (Status Test). Tanpa sesi aktif: pengawas tidak melihat siswa,
+        // admin memakai filter tingkatan. Simpan hanya mengubah siswa yang tampil.
+        // Filter tingkatan tetap ada; saat sesi aktif, bawaannya tingkatan sesi itu (mis. sesi Kelas X → X).
+        $sesi = ActiveTest::sesiAktif();
+        if ($sesi !== null && $this->request->getGet('tingkat') === null) {
+            $tingkat = in_array($sesi['tingkat'], Tingkat::LIST, true) ? $sesi['tingkat'] : '';
+        } else {
+            $tingkat = Tingkat::dariRequest();
+        }
+        $rows    = [];
+        if ($ruang && ($sesi !== null || $isAdmin)) {
+            $rows = array_values(array_filter(Absensi::forRuang($ruangId, $tanggal, $sesi['id'] ?? null), static fn ($r) => Tingkat::cocok((string) $r['kelas'], $tingkat)));
+        }
 
         return $this->render('kehadiran/index', [
             'title'   => 'Laporan Kehadiran',
@@ -40,6 +51,7 @@ class Kehadiran extends PanelController
             'rows'    => $rows,
             'tanggal' => $tanggal,
             'tingkat' => $tingkat,
+            'sesi'    => $sesi,
             'isAdmin' => $isAdmin,
         ]);
     }

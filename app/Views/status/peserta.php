@@ -32,6 +32,7 @@ $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
             <div>
                 <label class="form-label small mb-1" for="fRuang">Ruang</label>
                 <select class="form-select form-select-sm" id="fRuang" name="ruang" onchange="this.form.submit()" <?= $lockRuang ? 'disabled' : '' ?>>
@@ -40,11 +41,10 @@ $fmt = static fn ($ts) => $ts > 0 ? date('d/m H:i', $ts) : '–';
                         <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
                     <?php endif ?>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
         </form>
 
         <ul class="nav nav-pills mt-3 small">

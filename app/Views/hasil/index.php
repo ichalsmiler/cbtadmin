@@ -22,6 +22,7 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
                     <?php endforeach ?>
                 </select>
             </div>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <div>
                 <label class="form-label small mb-1" for="fKelas">Kelas</label>
                 <select class="form-select form-select-sm" id="fKelas" name="kelas">
@@ -37,11 +38,10 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
                     <option value="">Semua ruang</option>
                     <option value="0" <?= $ruangId === '0' ? 'selected' : '' ?>>(tanpa ruang)</option>
                     <?php foreach ($ruangList as $r): ?>
-                        <option value="<?= (int) $r['id'] ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
+                        <option value="<?= (int) $r['id'] ?>" data-kelas="<?= esc((string) $r['kelas'], 'attr') ?>" <?= (string) $r['id'] === $ruangId ? 'selected' : '' ?>><?= esc($r['nama']) ?></option>
                     <?php endforeach ?>
                 </select>
             </div>
-            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat, 'autoSubmit' => false]) ?>
             <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-search me-1"></i>Tampilkan</button>
         </form>
     </div>
@@ -65,9 +65,58 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
         <li class="nav-item"><a class="nav-link <?= $tab === 'semua' ? 'active' : '' ?>" href="<?= site_url('hasil_ujian') . '?' . $query ?>">Semua peserta</a></li>
         <li class="nav-item"><a class="nav-link <?= $tab === 'cepat' ? 'active' : '' ?>" href="<?= site_url('hasil_ujian') . '?' . $query . '&tab=cepat' ?>">
             <i class="bi bi-lightning-charge me-1"></i>Selesai terlalu cepat <span class="badge text-bg-<?= $cepat ? 'danger' : 'light' ?>"><?= count($cepat) ?></span></a></li>
+        <li class="nav-item"><a class="nav-link <?= $tab === 'analisis' ? 'active' : '' ?>" href="<?= site_url('hasil_ujian') . '?' . $query . '&tab=analisis' ?>">
+            <i class="bi bi-bar-chart me-1"></i>Analisis Soal</a></li>
     </ul>
 
-    <?php if ($tab === 'cepat'): ?>
+    <?php if ($tab === 'analisis'): ?>
+    <div class="card border-top-0 rounded-top-0">
+        <div class="card-header d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-semibold"><?= esc($quiz['name']) ?></span>
+            <?php if ($analisis): ?>
+                <span class="small text-muted"><?= (int) $analisis['n'] ?> siswa selesai dianalisis</span>
+                <span class="badge text-bg-success">Mudah <?= $analisis['ringkas']['Mudah'] ?></span>
+                <span class="badge text-bg-warning">Sedang <?= $analisis['ringkas']['Sedang'] ?></span>
+                <span class="badge text-bg-danger">Sukar <?= $analisis['ringkas']['Sukar'] ?></span>
+            <?php endif ?>
+            <div class="ms-auto d-flex gap-2">
+                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/export_analisis') . '?' . $query ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel analisis</a>
+            </div>
+        </div>
+        <div class="card-body">
+            <?php if (! $analisis || $analisis['n'] === 0): ?>
+                <p class="text-muted mb-0">Belum ada siswa yang selesai mengerjakan quiz ini (sesuai filter).</p>
+            <?php else: ?>
+                <table class="table table-hover align-middle w-100 datatable" data-order-col="0">
+                    <thead><tr><th>No</th><th>Soal</th><th class="text-end">Benar</th><th class="text-end">Salah</th><th class="text-end">Kosong</th>
+                        <th class="text-end">Indeks (P)</th><th>Tingkat</th><th class="text-end">Daya beda (D)</th><th>Kualitas</th></tr></thead>
+                    <tbody>
+                    <?php foreach ($analisis['butir'] as $b): ?>
+                        <tr>
+                            <td><?= (int) $b['no'] ?></td>
+                            <td class="small" style="max-width: 420px"><?= esc($b['teks'] !== '' ? $b['teks'] : $b['nama']) ?></td>
+                            <td class="text-end"><?= (int) $b['benar'] ?></td>
+                            <td class="text-end"><?= (int) $b['salah'] ?></td>
+                            <td class="text-end"><?= (int) $b['kosong'] ?></td>
+                            <td class="text-end fw-semibold" data-order="<?= $b['p'] ?? -1 ?>"><?= $num($b['p']) ?></td>
+                            <td data-order="<?= $b['p'] ?? -1 ?>"><?php if ($b['tingkat'] !== ''): ?><span class="badge text-bg-<?= ['Mudah' => 'success', 'Sedang' => 'warning', 'Sukar' => 'danger'][$b['tingkat']] ?>"><?= $b['tingkat'] ?></span><?php endif ?></td>
+                            <td class="text-end" data-order="<?= $b['d'] ?? -9 ?>"><?= $num($b['d']) ?></td>
+                            <td class="small <?= $b['d'] !== null && $b['d'] < 0.20 ? 'text-danger' : '' ?>"><?= esc($b['kualitas']) ?></td>
+                        </tr>
+                    <?php endforeach ?>
+                    </tbody>
+                </table>
+            <?php endif ?>
+            <p class="small text-muted mt-3 mb-0">
+                <strong>Indeks kesukaran (P)</strong> = rata-rata skor soal (proporsi siswa yang menjawab benar; kosong dihitung salah):
+                0,00–0,30 sukar, 0,31–0,70 sedang, 0,71–1,00 mudah.
+                <strong>Daya beda (D)</strong> = P kelompok atas − P kelompok bawah (27% siswa dengan total skor tertinggi dan terendah; minimal 4 siswa):
+                ≥ 0,40 sangat baik, 0,30–0,39 baik, 0,20–0,29 cukup, 0,00–0,19 jelek, negatif sebaiknya dibuang.
+                Hasil makin bisa dipercaya bila siswa yang dianalisis makin banyak. Soal acak dari bank soal dianalisis per nomor (slot).
+            </p>
+        </div>
+    </div>
+    <?php elseif ($tab === 'cepat'): ?>
     <div class="card border-top-0 rounded-top-0">
         <div class="card-body">
             <form class="d-flex flex-wrap gap-2 align-items-end small mb-3" method="get" action="<?= site_url('hasil_ujian') ?>">
@@ -114,6 +163,7 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
             <span class="small text-muted">Nilai skala 0–<?= $num($stats['skala']) ?></span>
             <div class="ms-auto d-flex gap-2">
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/export') . '?' . $query ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel</a>
+                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/export_soal') . '?' . $query ?>" title="Benar/salah tiap nomor soal per siswa"><i class="bi bi-grid-3x3 me-1"></i>Excel per soal</a>
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/pdf') . '?' . $query ?>" target="_blank" data-pdf><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
             </div>
         </div>

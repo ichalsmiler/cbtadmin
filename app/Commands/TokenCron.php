@@ -46,7 +46,7 @@ class TokenCron extends BaseCommand
             }
             $count = ActiveTest::sync();
             if ($count > 0) {
-                CLI::write($count . ' quiz dipasangi token yang berlaku.');
+                CLI::write($count . ' quiz dipasangi token/password bawaan yang berlaku.');
             }
         } catch (\Throwable $e) {
             log_message('error', 'cbt:token: ' . $e->getMessage());

@@ -124,6 +124,94 @@ class callbacks {
         if ($SCRIPT === '/mod/quiz/summary.php' && isloggedin()) {
             self::anti_submit();
         }
+        if ($SCRIPT === '/admin/user.php' && isloggedin() && isset($_GET['cbtcari'])) {
+            self::cari_pengguna();
+        }
+    }
+
+    // ------------------------------------------------------------------ Cari pengguna (Browse list of users)
+
+    /** Kolom yang bisa dicari dari kotak cari di admin/user.php. */
+    private const KOLOM_CARI = ['fullname', 'username', 'email'];
+
+    /** Id laporan sistem "Browse list of users" (filter disimpan per laporan per pengguna). */
+    private static function id_laporan_pengguna(): int {
+        $report = \core_reportbuilder\system_report_factory::create(
+            \core_admin\reportbuilder\local\systemreports\users::class, \context_system::instance());
+
+        return (int) $report->get_report_persistent()->get('id');
+    }
+
+    /** Kotak cari dikirim: isi filter "contains" laporan pengguna lalu kembali ke daftar. */
+    private static function cari_pengguna(): void {
+        $sys = \context_system::instance();
+        if (!confirm_sesskey() || !has_any_capability(['moodle/user:update', 'moodle/user:delete'], $sys)) {
+            return;
+        }
+        $q     = optional_param('cbtcari', '', PARAM_RAW_TRIMMED);
+        $kolom = optional_param('cbtkolom', 'fullname', PARAM_ALPHA);
+        $kolom = in_array($kolom, self::KOLOM_CARI, true) ? $kolom : 'fullname';
+
+        $id     = self::id_laporan_pengguna();
+        $values = \core_reportbuilder\local\helpers\user_filter_manager::get($id);
+        foreach (self::KOLOM_CARI as $k) {
+            unset($values["user:{$k}_operator"], $values["user:{$k}_value"]);
+        }
+        if ($q !== '') {
+            $values["user:{$kolom}_operator"] = \core_reportbuilder\local\filters\text::CONTAINS;
+            $values["user:{$kolom}_value"]    = $q;
+        }
+        \core_reportbuilder\local\helpers\user_filter_manager::set($id, $values);
+        redirect(new \moodle_url('/admin/user.php'));
+    }
+
+    /** HTML kotak cari di atas daftar pengguna (dipindah ke atas tabel oleh skrip). */
+    private static function kotak_cari_pengguna(): string {
+        $q = '';
+        $kolom = 'fullname';
+        try {
+            $values = \core_reportbuilder\local\helpers\user_filter_manager::get(self::id_laporan_pengguna());
+            foreach (self::KOLOM_CARI as $k) {
+                if ((int) ($values["user:{$k}_operator"] ?? 0) === \core_reportbuilder\local\filters\text::CONTAINS
+                        && (string) ($values["user:{$k}_value"] ?? '') !== '') {
+                    [$q, $kolom] = [(string) $values["user:{$k}_value"], $k];
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            debugging('local_cbtujian cari pengguna: ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+
+        $opsi = '';
+        foreach (self::KOLOM_CARI as $k) {
+            $opsi .= \html_writer::tag('option', get_string('cari_' . $k, 'local_cbtujian'),
+                ['value' => $k] + ($k === $kolom ? ['selected' => 'selected'] : []));
+        }
+        $url  = new \moodle_url('/admin/user.php');
+        $form = \html_writer::start_tag('form', ['method' => 'get', 'action' => $url->out(false),
+                'id' => 'cbt-cari-pengguna', 'class' => 'd-flex flex-wrap gap-2 align-items-center me-auto', 'hidden' => 'hidden'])
+            . \html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()])
+            . \html_writer::empty_tag('input', ['type' => 'search', 'name' => 'cbtcari', 'value' => $q,
+                'class' => 'form-control', 'style' => 'max-width:320px', 'autofocus' => 'autofocus',
+                'placeholder' => get_string('cari_placeholder', 'local_cbtujian'),
+                'aria-label' => get_string('cari_placeholder', 'local_cbtujian')])
+            . \html_writer::tag('select', $opsi, ['name' => 'cbtkolom', 'class' => 'form-select w-auto',
+                'aria-label' => get_string('cari_kolom', 'local_cbtujian')])
+            . \html_writer::tag('button', get_string('cari', 'local_cbtujian'), ['type' => 'submit', 'class' => 'btn btn-primary']);
+        if ($q !== '') {
+            $form .= \html_writer::link(new \moodle_url($url, ['cbtcari' => '', 'sesskey' => sesskey()]),
+                get_string('cari_hapus', 'local_cbtujian'), ['class' => 'btn btn-secondary']);
+        }
+        $form .= \html_writer::end_tag('form');
+
+        return $form . \html_writer::script(
+            "document.addEventListener('DOMContentLoaded',function(){var f=document.getElementById('cbt-cari-pengguna'),"
+            . "w=document.querySelector('[data-region=\"report-user-list-wrapper\"]');if(!f||!w)return;"
+            // Sebaris dengan tombol "Add a new user" / "Filters"; bila baris itu tidak ada, di atas tabel.
+            . "var b=w.querySelector('.dropdown.d-flex.justify-content-end');"
+            . "if(b){b.insertBefore(f,b.firstChild);}else{f.classList.add('mb-3');w.parentNode.insertBefore(f,w);}"
+            . "f.hidden=false;});"
+        );
     }
 
     /** Anti Submit: halaman ringkasan (tombol "Submit all and finish") baru bisa dibuka menjelang waktu habis. */
@@ -155,10 +243,41 @@ class callbacks {
         }
     }
 
+    // ------------------------------------------------------------------ Sebelum header
+
+    /**
+     * Siswa (tidak bisa mengubah course): tanpa menu course/quiz (Peserta, Nilai, Aktivitas, …) dan
+     * body diberi kelas `cbt-siswa` (laci blok kanan disembunyikan oleh boost.scss).
+     */
+    public static function sebelum_header(\core\hook\output\before_http_headers $hook): void {
+        global $PAGE;
+
+        if (!isloggedin() || isguestuser()) {
+            return;
+        }
+        $dicourse = !empty($PAGE->course->id) && (int) $PAGE->course->id !== SITEID;
+        $konteks  = $dicourse ? \context_course::instance($PAGE->course->id) : \context_system::instance();
+        if (has_capability('moodle/course:update', $konteks)) {
+            return;
+        }
+        $PAGE->add_body_class('cbt-siswa');
+        if ($dicourse) {
+            $PAGE->set_secondary_navigation(false);
+        }
+    }
+
     // ------------------------------------------------------------------ Awal halaman
 
     public static function awal_halaman(before_standard_top_of_body_html_generation $hook): void {
-        global $PAGE;
+        global $PAGE, $SCRIPT;
+
+        // Kotak cari di Site administration → Users → Browse list of users.
+        if ($SCRIPT === '/admin/user.php' && isloggedin()
+                && has_any_capability(['moodle/user:update', 'moodle/user:delete'], \context_system::instance())) {
+            $hook->add_html(self::kotak_cari_pengguna());
+
+            return;
+        }
 
         // Pesan setelah keluar otomatis oleh Anti Newtab.
         if ($PAGE->pagetype === 'login-index') {
@@ -171,6 +290,19 @@ class callbacks {
             ));
 
             return;
+        }
+
+        // Laci blok kanan disembunyikan (boost.scss), jadi kotak nomor soal disalin ke bawah soal
+        // (klik .qnbutton ditangani mod_quiz lewat delegasi di body).
+        if ($PAGE->pagetype === 'mod-quiz-attempt') {
+            $judul = json_encode(get_string('quiznavigation', 'quiz'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            $hook->add_html(\html_writer::script(
+                "document.addEventListener('DOMContentLoaded',function(){var b=document.querySelector('#mod_quiz_navblock .qn_buttons'),"
+                . "f=document.getElementById('responseform');if(!b||!f)return;var d=document.createElement('div');d.id='cbt-nav-soal';"
+                . "var h=document.createElement('div');h.className='cbt-nav-judul';h.textContent={$judul};d.appendChild(h);"
+                . "var c=b.cloneNode(true);c.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id');});"
+                . "d.appendChild(c);f.parentNode.insertBefore(d,f.nextSibling);});"
+            ));
         }
 
         // Anti Newtab: hanya saat mengerjakan quiz.

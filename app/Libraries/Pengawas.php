@@ -148,18 +148,21 @@ class Pengawas
     }
 
     /** Username peserta di ruang tertentu. */
-    public static function usernamesInRuang(int $ruangId): array
+    public static function usernamesInRuang(int $ruangId, ?int $sesiId = null): array
     {
-        return array_column(
-            db_connect()->table('peserta')->select('username')->where('ruang_id', $ruangId)->get()->getResultArray(),
-            'username'
-        );
+        $builder = db_connect()->table('peserta p')->select('p.username')->where('p.ruang_id', $ruangId);
+        if ($sesiId !== null) {
+            // Sesi peserta, atau sesi ruangnya bila peserta tidak punya sesi sendiri.
+            $builder->join('ruang r', 'r.id = p.ruang_id', 'left')->where('COALESCE(p.sesi_id, r.sesi_id)', $sesiId, false);
+        }
+
+        return array_column($builder->get()->getResultArray(), 'username');
     }
 
-    /** ID user Moodle untuk peserta di ruang tertentu. */
-    public static function moodleIdsInRuang(int $ruangId): array
+    /** ID user Moodle untuk peserta di ruang tertentu (opsional: hanya sesi tertentu). */
+    public static function moodleIdsInRuang(int $ruangId, ?int $sesiId = null): array
     {
-        $usernames = self::usernamesInRuang($ruangId);
+        $usernames = self::usernamesInRuang($ruangId, $sesiId);
         if ($usernames === []) {
             return [];
         }
