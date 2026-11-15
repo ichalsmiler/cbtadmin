@@ -183,7 +183,8 @@ class ActiveTest
     public static function apply(string $password, ?int $categoryId = null): int
     {
         $categoryId ??= self::categoryId();
-        if ($categoryId === 0) {
+        // Sesi dinonaktifkan: token tidak dipasang; semua quiz tetap berpassword bawaan (applyDefault).
+        if ($categoryId === 0 || self::sesiId() === 0) {
             return 0;
         }
 
@@ -217,7 +218,8 @@ class ActiveTest
     public static function applyDefault(): int
     {
         $categoryId = self::categoryId();
-        $aktif      = $categoryId > 0 ? array_map('intval', array_column(Moodle::quizzes($categoryId), 'id')) : [];
+        // Tanpa sesi aktif semua sesi tertutup: quiz tes aktif ikut dikunci password bawaan.
+        $aktif      = $categoryId > 0 && self::sesiId() > 0 ? array_map('intval', array_column(Moodle::quizzes($categoryId), 'id')) : [];
         $ids        = [];
         foreach (Moodle::quizzes() as $quiz) {
             if ((string) $quiz['password'] !== self::DEFAULT_PASSWORD && ! in_array((int) $quiz['id'], $aktif, true)) {

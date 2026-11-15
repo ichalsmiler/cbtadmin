@@ -23,13 +23,17 @@
 <?php else: ?>
 <div class="card mb-4 token-card">
     <div class="card-body text-center py-4">
+        <?php if (! empty($token['sesiBelum'])): ?>
+            <?php // Sesi nonaktif: nama tes disembunyikan; pesan di atas ikon, ukuran sama dengan baris nama tes (tebal). ?>
+            <div class="mb-2 fw-bold text-warning-emphasis">Sesi belum diaktifkan oleh proktor.</div>
+            <div class="token-display text-muted"><i class="bi bi-hourglass-split"></i></div>
+            <p class="small text-muted mt-2 mb-0">Token akan muncul setelah proktor mengaktifkan sesi ujian. Halaman ini diperbarui otomatis.</p>
+        <?php else: ?>
         <div class="text-muted mb-2">
             <?= $token['mapel'] !== '' ? 'Token tes <strong>' . esc($token['mapel']) . '</strong>' : 'Belum ada tes aktif' ?>
         </div>
+        <?php endif ?>
         <?php if (! empty($token['sesiBelum'])): ?>
-            <div class="token-display text-muted"><i class="bi bi-hourglass-split"></i></div>
-            <p class="mt-2 mb-0 fw-semibold text-warning-emphasis">Sesi belum diaktifkan oleh proktor.</p>
-            <p class="small text-muted mt-1 mb-0">Token akan muncul setelah proktor mengaktifkan sesi ujian. Halaman ini diperbarui otomatis.</p>
         <?php elseif ($token['kunci']): ?>
             <div class="token-display text-muted"><i class="bi bi-lock-fill"></i></div>
             <p class="mt-2 mb-3">Token muncul setelah absensi siswa ruang ini hari ini disimpan.</p>

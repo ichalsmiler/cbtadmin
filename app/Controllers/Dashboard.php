@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Libraries\ActiveTest;
 use App\Libraries\Moodle;
+use App\Libraries\PantauRuang;
 use App\Libraries\Pengawas;
 use App\Libraries\Settings;
 use App\Libraries\SysInfo;
@@ -61,7 +62,7 @@ class Dashboard extends PanelController
 
     private function collect(): array
     {
-        $data  = ['ruang' => null, 'users' => null, 'aktif' => null, 'belum' => null, 'sudah' => null, 'moodleError' => false];
+        $data  = ['ruang' => null, 'users' => null, 'aktif' => null, 'belumLogin' => null, 'belumMulai' => null, 'belum' => null, 'sudah' => null, 'pantau' => null, 'moodleError' => false];
         $ruang = $this->myRuang();
 
         try {
@@ -87,8 +88,18 @@ class Dashboard extends PanelController
                 $data['users'] = Moodle::totalUsers();
                 $data['aktif'] = Moodle::activeUsers($minutes);
             }
-            $data['belum'] = Moodle::unsubmittedAttempts($catId, $userIds);
-            $data['sudah'] = Moodle::finishedAttempts($catId, $userIds);
+            if ($ruang !== null) {
+                // Pengawas: tiap siswa masuk satu kelompok (belum login → belum mulai → mengerjakan → sudah submit).
+                $pantau          = PantauRuang::get($ruang, ActiveTest::sesiId() ?: null);
+                $data['pantau']  = $pantau;
+                $data['belumLogin'] = count($pantau['belumLogin']);
+                $data['belumMulai'] = count($pantau['belumMulai']);
+                $data['belum']   = count($pantau['mengerjakan']);
+                $data['sudah']   = count($pantau['sudah']);
+            } else {
+                $data['belum'] = Moodle::unsubmittedAttempts($catId, $userIds);
+                $data['sudah'] = Moodle::finishedAttempts($catId, $userIds);
+            }
         } catch (\Throwable $e) {
             $data['moodleError'] = true;
             log_message('error', 'Dashboard Moodle: ' . $e->getMessage());

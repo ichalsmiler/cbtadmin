@@ -175,6 +175,130 @@ $pilihJam = static function (string $name, string $id, string $label) use ($v): 
             . '<p class="small text-muted mt-2 mb-0">Menghapus sesi login yang sudah melewati batas waktu. Moodle juga melakukannya otomatis lewat cron.</p></div></div>') ?>
 
         <?php ob_start(); ?>
+        <?php
+        // Tab log: Panel (semua), Pengawas (login + jam absen + tindakan), Siswa (jam mulai), Login siswa, Belum mulai.
+        $tabLog = static fn (string $id, string $label) => '<li class="nav-item" role="presentation"><button class="nav-link' . ($logTab === $id ? ' active' : '') . '" data-bs-toggle="tab" data-bs-target="#log_' . $id . '" type="button" role="tab">' . $label . '</button></li>';
+        // Baris filter tanggal (+ batas telat untuk tab Siswa) dan tombol Excel, sama di tiap tab.
+        $filterLog = static function (string $tab, string $info, array $excel, string $ekstra = '') use ($logTgl): string {
+            $tombol = '';
+            foreach ($excel as $jenis => $label) {
+                $tombol .= '<a class="btn btn-outline-success btn-sm" href="' . site_url('tools/log_export') . '?' . http_build_query(['jenis' => $jenis, 'log_tgl' => $logTgl]) . '"><i class="bi bi-file-earmark-excel me-1"></i>' . $label . '</a>';
+            }
+
+            return '<form method="get" action="' . site_url('tools') . '#log" class="d-flex flex-wrap align-items-center gap-2 mb-2">'
+                . '<input type="hidden" name="log_tab" value="' . $tab . '">'
+                . '<label class="small text-muted" for="logTgl_' . $tab . '">Tanggal</label>'
+                . '<input class="form-control form-control-sm w-auto" type="date" id="logTgl_' . $tab . '" name="log_tgl" value="' . esc($logTgl, 'attr') . '" onchange="this.form.submit()">'
+                . $ekstra . '<span class="small text-muted ms-auto">' . $info . '</span>' . $tombol . '</form>';
+        };
+        $jejak = static fn (string $username, string $teks) => '<a href="' . site_url('tools/jejak') . '?' . http_build_query(['u' => $username, 'log_tgl' => $logTgl]) . '" target="_blank" title="Lihat jejak siswa ini">' . $teks . '</a>';
+        ?>
+        <ul class="nav nav-tabs mb-3 flex-nowrap overflow-auto" role="tablist">
+            <?= $tabLog('panel', 'Panel')
+                . $tabLog('pengawas', '<i class="bi bi-person-badge me-1"></i>Pengawas')
+                . $tabLog('siswa', '<i class="bi bi-play-circle me-1"></i>Mulai ujian')
+                . $tabLog('login', '<i class="bi bi-box-arrow-in-right me-1"></i>Login siswa')
+                . $tabLog('belum', '<i class="bi bi-hourglass me-1"></i>Belum mulai' . ($logBelum !== [] ? ' <span class="badge text-bg-warning">' . count($logBelum) . '</span>' : '')) ?>
+        </ul>
+        <div class="tab-content">
+        <div class="tab-pane fade<?= $logTab === 'pengawas' ? ' show active' : '' ?>" id="log_pengawas" role="tabpanel">
+            <?= $filterLog('pengawas', count(array_filter($logPengawas, static fn ($r) => $r['pertama'] !== null)) . ' dari ' . count($logPengawas) . ' ruang sudah absen', ['pengawas' => 'Excel']) ?>
+            <table class="table table-sm align-middle w-100 datatable" data-order-col="3">
+                <thead><tr><th>Ruang</th><th>Pengawas</th><th>Login panel</th><th>Jam absen</th><th>Terakhir diubah</th><th>Hasil</th></tr></thead>
+                <tbody>
+                <?php foreach ($logPengawas as $r): ?>
+                    <tr>
+                        <td class="text-nowrap"><?= esc($r['ruang']) ?></td>
+                        <td class="small"><?= esc($r['pengawas'] !== '' ? $r['pengawas'] : '–') ?><?php if ($r['oleh'] !== '' || $r['akun'] !== ''): ?><br><code><?= esc($r['oleh'] !== '' ? $r['oleh'] : $r['akun']) ?></code><?php endif ?></td>
+                        <td data-order="<?= $r['login'] ? esc(substr($r['login']['jam'], 11), 'attr') : '99' ?>" class="text-nowrap small">
+                            <?= $r['login'] ? esc(substr($r['login']['jam'], 11)) . '<br><span class="text-muted">' . esc($r['login']['ip']) . ($r['login']['kali'] > 1 ? ' · ' . $r['login']['kali'] . '×' : '') . '</span>' : '<span class="text-muted">Belum login</span>' ?></td>
+                        <td data-order="<?= $r['pertama'] ? esc(substr($r['pertama'], 11), 'attr') : '99' ?>" class="text-nowrap">
+                            <?= $r['pertama'] ? '<strong>' . esc(substr($r['pertama'], 11)) . '</strong>' : '<span class="badge text-bg-warning">Belum absen</span>' ?></td>
+                        <td class="text-nowrap small"><?= $r['kali'] > 1 ? esc(substr((string) $r['terakhir'], 11)) . ' <span class="text-muted">(' . $r['kali'] . '×)</span>' : '–' ?></td>
+                        <td class="small"><?= esc($r['detail']) ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+            <div class="d-flex align-items-center mt-4 mb-2">
+                <span class="fw-semibold">Tindakan pengawas</span>
+                <span class="small text-muted ms-2">blokir, buka blokir, reset login, paksa submit, tambah waktu, cetak, dll.</span>
+                <a class="btn btn-outline-success btn-sm ms-auto" href="<?= site_url('tools/log_export') . '?' . http_build_query(['jenis' => 'tindakan', 'log_tgl' => $logTgl]) ?>"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+            </div>
+            <table class="table table-sm align-middle w-100 datatable" data-order-col="0" data-order-dir="desc">
+                <thead><tr><th>Waktu</th><th>Pengawas</th><th>Aksi</th><th>Detail</th></tr></thead>
+                <tbody>
+                <?php foreach ($logTindakan as $t): ?>
+                    <tr>
+                        <td class="text-nowrap"><?= esc(substr($t['waktu'], 11)) ?></td>
+                        <td class="small"><?= esc($t['nama']) ?><br><span class="text-muted">Ruang <?= esc($t['ruang'] !== '' ? $t['ruang'] : '–') ?> · <code><?= esc($t['akun']) ?></code></span></td>
+                        <td><code><?= esc($t['aksi']) ?></code></td>
+                        <td class="small"><?= esc($t['detail']) ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade<?= $logTab === 'siswa' ? ' show active' : '' ?>" id="log_siswa" role="tabpanel">
+            <?php $jumlahTelat = count(array_filter($logSiswa, static fn ($s) => $s['telat'] !== null && $s['telat'] > $logTelat)); ?>
+            <?= $filterLog('siswa', count($logSiswa) . ' kali mulai' . ($jumlahTelat ? ' · <span class="text-warning-emphasis">' . $jumlahTelat . ' telat</span>' : ''), ['siswa' => 'Excel'],
+                '<label class="small text-muted ms-2" for="logTelat">Telat bila lewat</label><input class="form-control form-control-sm" style="width:4.5rem" type="number" min="0" max="240" id="logTelat" name="telat" value="' . $logTelat . '" onchange="this.form.submit()"><span class="small text-muted">menit</span>') ?>
+            <p class="small text-muted mb-2">Jam mulai = saat siswa menekan "Mulai" dan soal nomor 1 tampil. Telat dihitung dari jam ujian tingkatannya di Info Kegiatan. Klik nama untuk melihat jejaknya.</p>
+            <table class="table table-sm align-middle w-100 datatable" data-order-col="0" data-order-dir="desc">
+                <thead><tr><th>Jam mulai</th><th>Siswa</th><th>Ruang</th><th>Mapel</th><th>Selesai</th></tr></thead>
+                <tbody>
+                <?php foreach ($logSiswa as $s): ?>
+                    <?php $telat = $s['telat'] !== null && $s['telat'] > $logTelat; ?>
+                    <tr<?= $telat ? ' class="table-warning"' : '' ?>>
+                        <td data-order="<?= $s['mulai'] ?>" class="text-nowrap"><strong><?= date('H:i:s', $s['mulai']) ?></strong>
+                            <?= $telat ? '<br><span class="badge text-bg-warning">Telat ' . $s['telat'] . ' mnt</span>' : '' ?></td>
+                        <td class="small"><?= $jejak($s['username'], esc($s['nama'])) ?><br><span class="text-muted"><?= esc($s['kelas']) ?> · <code><?= esc($s['username']) ?></code></span></td>
+                        <td class="text-nowrap"><?= esc($s['ruang'] !== '' ? $s['ruang'] : '–') ?></td>
+                        <td class="small" title="<?= esc($s['ujian'], 'attr') ?>"><?= esc($s['mapel']) ?></td>
+                        <td class="text-nowrap small"><?= $s['selesai'] ? date('H:i:s', $s['selesai']) : ($s['state'] === 'inprogress' ? '<span class="badge text-bg-info">Mengerjakan</span>' : '–') ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade<?= $logTab === 'login' ? ' show active' : '' ?>" id="log_login" role="tabpanel">
+            <?php $pindah = count(array_filter($logLogin, static fn ($s) => count($s['ips']) > 1)); ?>
+            <?= $filterLog('login', count($logLogin) . ' siswa login' . ($pindah ? ' · <span class="text-warning-emphasis">' . $pindah . ' dari &gt;1 IP</span>' : ''), ['login' => 'Excel']) ?>
+            <p class="small text-muted mb-2">Login siswa di Moodle. Baris kuning = login dari lebih dari satu IP (pindah komputer atau akun dipakai orang lain).</p>
+            <table class="table table-sm align-middle w-100 datatable" data-order-col="2">
+                <thead><tr><th>Siswa</th><th>Ruang</th><th>Login pertama</th><th>Terakhir</th><th>IP</th><th>Logout</th></tr></thead>
+                <tbody>
+                <?php foreach ($logLogin as $s): ?>
+                    <tr<?= count($s['ips']) > 1 ? ' class="table-warning"' : '' ?>>
+                        <td class="small"><?= $jejak($s['username'], esc($s['nama'])) ?><br><span class="text-muted"><?= esc($s['kelas']) ?> · <code><?= esc($s['username']) ?></code></span></td>
+                        <td class="text-nowrap"><?= esc($s['ruang'] !== '' ? $s['ruang'] : '–') ?></td>
+                        <td data-order="<?= $s['pertama'] ?>" class="text-nowrap"><strong><?= date('H:i:s', $s['pertama']) ?></strong></td>
+                        <td class="text-nowrap small"><?= $s['kali'] > 1 ? date('H:i:s', $s['terakhir']) . ' <span class="text-muted">(' . $s['kali'] . '×)</span>' : '–' ?></td>
+                        <td class="small"><?= esc(implode(', ', $s['ips'])) ?></td>
+                        <td class="text-nowrap small"><?= $s['logout'] ? date('H:i:s', $s['logout']) : '–' ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade<?= $logTab === 'belum' ? ' show active' : '' ?>" id="log_belum" role="tabpanel">
+            <?= $filterLog('belum', count($logBelum) . ' siswa hadir belum mulai', ['belum' => 'Excel']) ?>
+            <p class="small text-muted mb-2">Siswa yang ditandai <strong>hadir</strong> oleh pengawas pada tanggal ini tetapi belum memulai ujian apa pun hari itu.</p>
+            <table class="table table-sm align-middle w-100 datatable" data-order-col="1">
+                <thead><tr><th>Siswa</th><th>Ruang</th><th>Diabsen</th><th>Login</th></tr></thead>
+                <tbody>
+                <?php foreach ($logBelum as $s): ?>
+                    <tr>
+                        <td class="small"><?= $jejak($s['username'], esc($s['nama'])) ?><br><span class="text-muted"><?= esc($s['kelas']) ?> · <code><?= esc($s['username']) ?></code></span></td>
+                        <td class="text-nowrap"><?= esc($s['ruang'] !== '' ? $s['ruang'] : '–') ?></td>
+                        <td class="small text-nowrap"><?= esc($s['jam_absen']) ?> <span class="text-muted">oleh <?= esc($s['dicatat_oleh']) ?></span></td>
+                        <td><?= $s['login'] ? '<span class="badge text-bg-info">Sudah login</span>' : '<span class="badge text-bg-secondary">Belum login</span>' ?></td>
+                    </tr>
+                <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="tab-pane fade<?= $logTab === 'panel' ? ' show active' : '' ?>" id="log_panel" role="tabpanel">
         <table class="table table-sm align-middle w-100 datatable" data-order-col="0">
             <thead><tr><th>Waktu</th><th>Akun</th><th>Aksi</th><th>Detail</th><th>IP</th></tr></thead>
             <tbody>
@@ -189,7 +313,9 @@ $pilihJam = static function (string $name, string $id, string $label) use ($v): 
             <?php endforeach ?>
             </tbody>
         </table>
-        <?= $item('lainTools', 'log', 'journal-text', 'Log aktivitas (300 terakhir)', (string) ob_get_clean()) ?>
+        </div>
+        </div>
+        <?= $item('lainTools', 'log', 'journal-text', 'Log aktivitas', (string) ob_get_clean()) ?>
     </div>
 </div>
 

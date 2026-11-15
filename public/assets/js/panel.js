@@ -163,7 +163,7 @@
         tables.push(new DataTable(el, {
             pageLength: 25,
             lengthMenu: [10, 25, 50, 100, 500],
-            order: [[parseInt(el.dataset.orderCol || '0', 10), 'asc']],
+            order: [[parseInt(el.dataset.orderCol || '0', 10), el.dataset.orderDir === 'desc' ? 'desc' : 'asc']],
             language: {
                 search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ baris',
                 info: '_START_–_END_ dari _TOTAL_', infoEmpty: 'Tidak ada data',
@@ -315,7 +315,28 @@
         start: function (url, seconds) {
             var format = new Intl.NumberFormat('id-ID');
             var apply = function (data) {
-                ['ruang', 'users', 'aktif', 'belum', 'sudah'].forEach(function (key) {
+                // Pantauan siswa pengawas: isi ulang daftar nama tiap kelompok.
+                if (data.pantau) {
+                    Object.keys(data.pantau).forEach(function (key) {
+                        var list = document.querySelector('[data-pantau="' + key + '"]');
+                        if (!list) { return; }
+                        list.replaceChildren.apply(list, data.pantau[key].map(function (s) {
+                            var li = document.createElement('li');
+                            var nama = document.createElement('span');
+                            nama.textContent = s.nama + ' ';
+                            var kelas = document.createElement('span');
+                            kelas.className = 'text-muted';
+                            kelas.textContent = '· ' + s.kelas;
+                            nama.appendChild(kelas);
+                            li.appendChild(nama);
+                            if (s.info) { var info = document.createElement('small'); info.textContent = s.info; li.appendChild(info); }
+                            return li;
+                        }));
+                        document.querySelector('[data-pantau-jumlah="' + key + '"]').textContent = data.pantau[key].length;
+                        document.querySelector('[data-pantau-kosong="' + key + '"]').classList.toggle('d-none', data.pantau[key].length > 0);
+                    });
+                }
+                ['ruang', 'users', 'aktif', 'belumLogin', 'belumMulai', 'belum', 'sudah'].forEach(function (key) {
                     var el = document.querySelector('[data-stat="' + key + '"]');
                     if (!el) { return; }
                     var v = data[key];

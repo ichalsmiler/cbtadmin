@@ -67,7 +67,20 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
             <?= csrf_field() ?>
             <div class="tes-bagian">
                 <label class="tes-judul" for="sesi_id">Sesi ujian</label>
-                <p class="tes-ket">Wajib dipilih. Pengawas hanya melihat siswa sesi ini.</p>
+                <p class="tes-ket">Wajib dipilih. Pengawas hanya melihat siswa sesi ini. Bila sesi dinonaktifkan, semua sesi tertutup: semua quiz dikunci password bawaan dan token pengawas disembunyikan.</p>
+                <?php $sesiAktifRow = null; foreach ($sesiList as $s) { if ($s['id'] === $sesiAktif) { $sesiAktifRow = $s; } } ?>
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <?php if ($sesiAktifRow !== null): ?>
+                        <span class="badge text-bg-success fs-6 fw-normal"><i class="bi bi-broadcast me-1"></i>Aktif: <?= esc($sesiAktifRow['label']) ?></span>
+                        <button class="btn btn-outline-danger btn-sm ms-auto" type="submit" formaction="<?= site_url('status_tes/sesi') ?>" formnovalidate name="aksi" value="nonaktifkan"
+                                onclick="return confirm('Nonaktifkan <?= esc($sesiAktifRow['label'], 'js') ?>? Semua sesi tertutup: quiz dikunci password bawaan sehingga siswa tidak bisa mulai. Siswa yang sedang mengerjakan tetap bisa melanjutkan.')">
+                            <i class="bi bi-stop-circle me-1"></i>Nonaktifkan sesi
+                        </button>
+                    <?php else: ?>
+                        <span class="badge text-bg-secondary fs-6 fw-normal"><i class="bi bi-slash-circle me-1"></i>Semua sesi nonaktif</span>
+                    <?php endif ?>
+                </div>
+            <div class="input-group">
             <select class="form-select" id="sesi_id" name="sesi_id" required>
                 <option value="">Pilih Sesi</option>
                 <?php foreach ($sesiList as $s): ?>
@@ -76,6 +89,11 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
                     </option>
                 <?php endforeach ?>
             </select>
+                <button class="btn btn-success" type="submit" formaction="<?= site_url('status_tes/sesi') ?>" formnovalidate name="aksi" value="aktifkan"
+                        title="Aktifkan sesi yang dipilih tanpa mengubah tes dan mapel">
+                    <i class="bi bi-play-circle me-1"></i>Aktifkan
+                </button>
+            </div>
             <?php if ($sesiList === []): ?>
                 <div class="alert alert-warning small py-2 mt-2 mb-0">Belum ada sesi. Impor peserta (kolom sesi) atau tambah sesi di Daftar Ruang.</div>
             <?php endif ?>

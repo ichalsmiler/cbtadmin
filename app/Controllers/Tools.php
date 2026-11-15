@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Libraries\ActivityLog;
+use App\Libraries\Excel;
+use App\Libraries\LogUjian;
 use App\Libraries\Moodle;
 use App\Libraries\MoodleBridge;
 use App\Libraries\School;
@@ -33,8 +35,26 @@ class Tools extends PanelController
     public function index(): string
     {
         $db = db_connect();
+        // Log pengawas (jam absen) dan siswa (jam mulai ujian) per tanggal; bawaan hari ini.
+        $logTgl = $this->logTanggal();
+        $log    = ['siswa' => [], 'login' => [], 'belum' => []];
+        foreach (['siswa' => 'siswa', 'login' => 'loginSiswa', 'belum' => 'belumMulai'] as $k => $fn) {
+            try {
+                $log[$k] = LogUjian::$fn($logTgl);
+            } catch (\Throwable $e) {
+                log_message('error', 'Log ' . $k . ': ' . $e->getMessage());
+            }
+        }
 
         return $this->render('tools/index', [
+            'logTgl'      => $logTgl,
+            'logTab'      => in_array($this->request->getGet('log_tab'), self::LOG_TAB, true) ? $this->request->getGet('log_tab') : 'panel',
+            'logTelat'    => $this->logTelat(),
+            'logPengawas' => LogUjian::pengawas($logTgl),
+            'logTindakan' => LogUjian::tindakanPengawas($logTgl),
+            'logSiswa'    => $log['siswa'],
+            'logLogin'    => $log['login'],
+            'logBelum'    => $log['belum'],
             'title'   => 'Tools',
             'values'  => Settings::all(),
             'hasLogo' => School::logoPath() !== null,
@@ -44,6 +64,91 @@ class Tools extends PanelController
             'meId'    => (int) session()->get('admin_id'),
             'logs'    => $db->table('activity_log')->orderBy('id', 'DESC')->limit(300)->get()->getResultArray(),
         ]);
+    }
+
+    // ------------------------------------------------------------------ Log pengawas / siswa
+
+    private const LOG_TAB = ['pengawas', 'siswa', 'login', 'belum'];
+
+    private function logTanggal(): string
+    {
+        $t = (string) $this->request->getGet('log_tgl');
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $t) && strtotime($t) ? $t : date('Y-m-d');
+    }
+
+    /** Batas "telat mulai" (menit setelah jam ujian tingkatan). */
+    private function logTelat(): int
+    {
+        $v = $this->request->getGet('telat');
+
+        return $v === null || $v === '' ? 15 : max(0, min(240, (int) $v));
+    }
+
+    /** Jejak satu siswa pada satu tanggal (login, mulai, submit, absensi, tindakan pengawas). */
+    public function jejak(): string
+    {
+        $username = trim((string) $this->request->getGet('u'));
+        $tanggal  = $this->logTanggal();
+        $data     = ['peserta' => null, 'items' => []];
+        $error    = false;
+        if ($username !== '') {
+            try {
+                $data = LogUjian::jejak($username, $tanggal);
+            } catch (\Throwable $e) {
+                $error = true;
+                log_message('error', 'Jejak siswa: ' . $e->getMessage());
+            }
+        }
+
+        return $this->render('tools/jejak', $data + [
+            'title' => 'Jejak Siswa', 'username' => $username, 'tanggal' => $tanggal, 'error' => $error,
+        ]);
+    }
+
+    /** Ekspor Excel tab log: pengawas, tindakan, siswa, login, belum. */
+    public function logExport()
+    {
+        $jenis = (string) $this->request->getGet('jenis');
+        $tgl   = $this->logTanggal();
+        $jam   = static fn (?string $dt) => $dt ? substr($dt, 11, 8) : '';
+        $wkt   = static fn (?int $ts) => $ts ? date('H:i:s', $ts) : '';
+
+        switch ($jenis) {
+            case 'pengawas':
+                $headers = ['ruang', 'pengawas', 'akun', 'login_panel', 'ip_login', 'jam_absen', 'terakhir_diubah', 'jumlah_simpan', 'hasil'];
+                $rows    = array_map(static fn ($r) => [
+                    $r['ruang'], $r['pengawas'], $r['oleh'] !== '' ? $r['oleh'] : $r['akun'], $jam($r['login']['jam'] ?? null), $r['login']['ip'] ?? '',
+                    $r['pertama'] ? $jam($r['pertama']) : 'Belum absen', $r['kali'] > 1 ? $jam($r['terakhir']) : '', $r['kali'], $r['detail'],
+                ], LogUjian::pengawas($tgl));
+                break;
+            case 'tindakan':
+                $headers = ['waktu', 'akun', 'nama', 'ruang', 'aksi', 'detail', 'ip'];
+                $rows    = array_map(static fn ($r) => [$jam($r['waktu']), $r['akun'], $r['nama'], $r['ruang'], $r['aksi'], $r['detail'], $r['ip']], LogUjian::tindakanPengawas($tgl));
+                break;
+            case 'siswa':
+                $headers = ['jam_mulai', 'username', 'nama', 'kelas', 'ruang', 'mapel', 'ujian', 'telat_menit', 'selesai', 'status'];
+                $rows    = array_map(static fn ($s) => [
+                    $wkt($s['mulai']), $s['username'], $s['nama'], $s['kelas'], $s['ruang'], $s['mapel'], $s['ujian'],
+                    $s['telat'] !== null && $s['telat'] > 0 ? $s['telat'] : '', $wkt($s['selesai']), $s['state'] === 'inprogress' ? 'Mengerjakan' : ($s['selesai'] ? 'Selesai' : $s['state']),
+                ], LogUjian::siswa($tgl));
+                break;
+            case 'login':
+                $headers = ['username', 'nama', 'kelas', 'ruang', 'login_pertama', 'login_terakhir', 'jumlah_login', 'ip', 'logout_terakhir'];
+                $rows    = array_map(static fn ($s) => [
+                    $s['username'], $s['nama'], $s['kelas'], $s['ruang'], $wkt($s['pertama']), $wkt($s['terakhir']), $s['kali'], implode(', ', $s['ips']), $wkt($s['logout']),
+                ], LogUjian::loginSiswa($tgl));
+                break;
+            case 'belum':
+                $headers = ['username', 'nama', 'kelas', 'ruang', 'diabsen_oleh', 'jam_absen', 'sudah_login'];
+                $rows    = array_map(static fn ($s) => [$s['username'], $s['nama'], $s['kelas'], $s['ruang'], $s['dicatat_oleh'], $s['jam_absen'], $s['login'] ? 'Ya' : 'Belum'], LogUjian::belumMulai($tgl));
+                break;
+            default:
+                return redirect()->to(site_url('tools') . '#log');
+        }
+        ActivityLog::add('export_log', $jenis . ' ' . $tgl);
+
+        return $this->response->download('log_' . $jenis . '_' . $tgl . '.xlsx', Excel::build($headers, $rows));
     }
 
     // ------------------------------------------------------------------ Info Sekolah / Info Kegiatan / pengaturan panel

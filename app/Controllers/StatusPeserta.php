@@ -172,7 +172,7 @@ class StatusPeserta extends PanelController
                     $items = array_merge($items, MoodleBridge::call('add_time', ['quizid' => $quizId, 'userids' => $userIds, 'minutes' => $minutes]));
                 }
 
-                return $this->report($items, "tambah_waktu_{$minutes}_menit", "Waktu ditambah {$minutes} menit untuk %d peserta.");
+                return $this->report($items, "tambah_waktu_{$minutes}_menit", "Waktu ditambah {$minutes} menit untuk %d peserta.", array_merge(...array_values($pairs)));
             }
 
             // Hapus attempt hanya lewat menu Hapus Attempt (khusus administrator).
@@ -184,7 +184,7 @@ class StatusPeserta extends PanelController
                 return redirect()->back()->with('error', 'Tidak ada peserta terpilih yang sedang mengerjakan.');
             }
 
-            return $this->report(MoodleBridge::call('finish_attempts', ['attemptids' => $attempts]), 'paksa_submit', '%d attempt disubmit.');
+            return $this->report(MoodleBridge::call('finish_attempts', ['attemptids' => $attempts]), 'paksa_submit', '%d attempt disubmit.', array_merge(...array_values($pairs)));
         } catch (\Throwable $e) {
             return redirect()->back()->with('error', 'Aksi gagal: ' . $e->getMessage());
         }
@@ -192,7 +192,7 @@ class StatusPeserta extends PanelController
 
     // ------------------------------------------------------------------ Bantuan
 
-    private function report(array $items, string $logAction, string $successText)
+    private function report(array $items, string $logAction, string $successText, array $userIds = [])
     {
         $ok     = 0;
         $errors = [];
@@ -203,7 +203,7 @@ class StatusPeserta extends PanelController
                 $ok++;
             }
         }
-        ActivityLog::add($logAction, $ok . ' berhasil, ' . count($errors) . ' gagal');
+        ActivityLog::add($logAction, $ok . ' berhasil, ' . count($errors) . ' gagal' . $this->daftarSiswaLog($userIds));
 
         $message = sprintf($successText, $ok);
         if ($errors !== []) {

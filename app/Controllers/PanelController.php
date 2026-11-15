@@ -6,7 +6,7 @@ use App\Libraries\Settings;
 
 abstract class PanelController extends BaseController
 {
-    public const VERSION = '2.3.12';
+    public const VERSION = '2.3.14';
 
     protected $helpers = ['url', 'form'];
 
@@ -64,6 +64,19 @@ abstract class PanelController extends BaseController
             \App\Libraries\Moodle::db()->table(\App\Libraries\Moodle::t('user'))->select('id')->where('deleted', 0)->whereIn('username', $usernames)->get()->getResultArray(),
             'id'
         ));
+    }
+
+    /** "siswa: u1, u2, …" dari ID user Moodle, untuk detail log (dipakai jejak siswa di Tools → Log). */
+    protected function daftarSiswaLog(array $moodleIds): string
+    {
+        $ids = array_values(array_unique(array_map('intval', $moodleIds)));
+        if ($ids === []) {
+            return '';
+        }
+        $names = array_column(\App\Libraries\Moodle::db()->table(\App\Libraries\Moodle::t('user'))->select('username')
+            ->whereIn('id', array_slice($ids, 0, 200))->get()->getResultArray(), 'username');
+
+        return '; siswa: ' . implode(', ', $names) . (count($ids) > 200 ? ', … (' . count($ids) . ' siswa)' : '');
     }
 
     /** Ruang yang diawasi akun yang sedang login; null untuk administrator atau proktor tanpa ruang. */

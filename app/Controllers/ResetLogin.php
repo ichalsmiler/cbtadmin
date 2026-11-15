@@ -123,7 +123,7 @@ class ResetLogin extends PanelController
                 $killed += $item['count'];
             }
         }
-        ActivityLog::add('reset_login', "$label: $users peserta, $killed sesi");
+        ActivityLog::add('reset_login', "$label: $users peserta, $killed sesi" . $this->daftarSiswaLog($ids));
 
         $message = "Login direset untuk $users peserta ($killed sesi) dari $label. Peserta bisa login lagi di perangkat lain; attempt yang sedang berjalan tetap tersimpan.";
         if ($errors !== []) {

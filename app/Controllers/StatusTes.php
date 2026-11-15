@@ -190,6 +190,56 @@ class StatusTes extends PanelController
         return redirect()->to(site_url('status_tes'))->with('success', $message);
     }
 
+    /**
+     * Aktifkan sesi terpilih atau nonaktifkan sesi (semua sesi tertutup): tanpa sesi aktif semua quiz dikunci
+     * password bawaan, token pengawas disembunyikan, dan pengawas tidak melihat daftar siswa.
+     * Siswa yang sudah mulai tetap bisa melanjutkan (password hanya diminta saat mulai).
+     */
+    public function sesi()
+    {
+        $aksi = (string) $this->request->getPost('aksi');
+        if ($aksi === 'nonaktifkan') {
+            $lama = ActiveTest::sesiAktif();
+            Settings::set('sesi_aktif', '');
+            $message = 'Sesi ujian dinonaktifkan; semua sesi tertutup.';
+            try {
+                $n = ActiveTest::applyDefault();
+                $message .= $n > 0 ? ' ' . $n . ' quiz dikunci dengan password bawaan.' : ' Semua quiz sudah berpassword bawaan.';
+            } catch (\Throwable $e) {
+                $message .= ' Tetapi penguncian quiz gagal: ' . $e->getMessage();
+            }
+            ActivityLog::add('sesi_nonaktif', $lama['label'] ?? '-');
+
+            return redirect()->to(site_url('status_tes'))->with('success', $message . ' Siswa yang sedang mengerjakan tetap bisa melanjutkan.');
+        }
+
+        $sesiId = (int) $this->request->getPost('sesi_id');
+        $sesi   = null;
+        foreach (ActiveTest::sesiList() as $s) {
+            if ($s['id'] === $sesiId) {
+                $sesi = $s;
+            }
+        }
+        if ($sesi === null) {
+            return redirect()->to(site_url('status_tes'))->with('error', 'Pilih sesi yang akan diaktifkan.');
+        }
+        if (ActiveTest::categoryId() === 0) {
+            return redirect()->to(site_url('status_tes') . '?sesi=' . $sesiId)->with('error', 'Belum ada tes aktif. Pilih tes dan mapel, lalu klik Simpan.');
+        }
+        Settings::set('sesi_aktif', (string) $sesiId);
+        $message = $sesi['label'] . ' diaktifkan.';
+        try {
+            if (ActiveTest::tokenEnabled()) {
+                $message .= ActiveTest::token() === '' ? ' Token: ' . ActiveTest::release() . '.' : ' Token ' . ActiveTest::token() . ' dipasang (' . ActiveTest::sync() . ' quiz diperbarui).';
+            }
+        } catch (\Throwable $e) {
+            $message .= ' Tetapi token gagal dipasang: ' . $e->getMessage();
+        }
+        ActivityLog::add('sesi_aktif', $sesi['label']);
+
+        return redirect()->to(site_url('status_tes'))->with('success', $message);
+    }
+
     /** Release token baru sekarang. */
     public function release()
     {

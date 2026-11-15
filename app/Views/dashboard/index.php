@@ -13,8 +13,17 @@ $cards = $isAdmin ? [
     // Pengawas: sesi yang sedang ujian (mis. "Sesi Aktif (Kelas X)") dan jumlah siswa ruangnya di sesi itu.
     ['ruang', $myRuang !== null ? 'Sesi Aktif' . ($sesiAktif !== null && $sesiAktif['tingkat'] !== '' ? ' (Kelas ' . $sesiAktif['tingkat'] . ')' : '') : 'Total Ruang', 'teal', 'calendar-check', null],
     ['users', $myRuang !== null ? ($sesiAktif !== null ? 'Siswa di Ruang (sesi aktif)' : 'Siswa di Ruang') : 'Total Siswa', 'yellow', 'people', 'peserta_ruang'],
-    ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
-    ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
+    // Urutan pantauan: belum login → belum mulai → mengerjakan → sudah submit (tautan ke daftar nama di bawah).
+    ['belumLogin', 'Belum Login', 'gray', 'person-x', '#pantau-belumLogin'],
+    ['belumMulai', 'Belum Mulai', 'orange', 'hourglass', '#pantau-belumMulai'],
+    ['belum', 'Mengerjakan', 'pink', 'pencil-square', '#pantau-mengerjakan'],
+    ['sudah', 'Sudah Submit', 'green', 'check2-circle', '#pantau-sudah'],
+];
+$pantauKolom = [
+    'belumLogin'  => ['Belum login', 'gray', 'Belum masuk Moodle hari ini'],
+    'belumMulai'  => ['Belum mulai', 'orange', 'Sudah login, belum membuka soal'],
+    'mengerjakan' => ['Mengerjakan', 'pink', 'Sedang mengerjakan soal'],
+    'sudah'       => ['Sudah submit', 'green', 'Ujian hari ini sudah selesai'],
 ];
 $bars = $isAdmin ? [
     ['cpu', 'CPU', $stats['sys']['cpu']['cores'] . ' core · ' . $stats['sys']['cpu']['model']],
@@ -52,7 +61,7 @@ $bars = $isAdmin ? [
     Database Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.
 </div>
 
-<div class="row g-3 mb-4 row-cols-2 <?= count($cards) > 4 ? 'row-cols-md-3 row-cols-xl-5' : 'row-cols-xl-4' ?>">
+<div class="row g-3 mb-4 row-cols-2 <?= count($cards) > 5 ? 'row-cols-md-3 row-cols-xxl-6' : (count($cards) > 4 ? 'row-cols-md-3 row-cols-xl-5' : 'row-cols-xl-4') ?>">
     <?php foreach ($cards as [$key, $label, $color, $icon, $link]): ?>
         <div class="col">
             <div class="stat-card stat-<?= $color ?>">
@@ -60,12 +69,40 @@ $bars = $isAdmin ? [
                 <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : (is_int($stats[$key]) ? number_format($stats[$key], 0, ',', '.') : esc($stats[$key])) ?></div>
                 <div class="stat-label"><?= esc($label) ?></div>
                 <?php if ($link !== null): ?>
-                    <a class="stat-link" href="<?= site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
+                    <a class="stat-link" href="<?= $link[0] === '#' ? $link : site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
                 <?php endif ?>
             </div>
         </div>
     <?php endforeach ?>
 </div>
+
+<?php if (! $isAdmin && $myRuang !== null): ?>
+<?php // Pantauan siswa ruang: nama per kelompok, diperbarui bersama statistik (CbtDashboard → data.pantau). ?>
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center">
+        <span class="fw-semibold"><i class="bi bi-binoculars me-1"></i>Pantauan Siswa</span>
+        <span class="small text-muted ms-2 d-none d-sm-inline">diperbarui otomatis tiap <?= (int) $refresh ?> detik</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 row-cols-1 row-cols-md-2 row-cols-xl-4">
+            <?php foreach ($pantauKolom as $k => [$judul, $warna, $ket]): ?>
+                <div class="col" id="pantau-<?= $k ?>">
+                    <div class="pantau-kolom stat-<?= $warna ?>">
+                        <div class="pantau-judul"><?= esc($judul) ?> <span class="badge pantau-jumlah" data-pantau-jumlah="<?= $k ?>"><?= count($stats['pantau'][$k] ?? []) ?></span></div>
+                        <div class="small text-muted mb-2"><?= esc($ket) ?></div>
+                        <ol class="pantau-daftar" data-pantau="<?= $k ?>">
+                            <?php foreach ($stats['pantau'][$k] ?? [] as $s): ?>
+                                <li><span><?= esc($s['nama']) ?> <span class="text-muted">· <?= esc($s['kelas']) ?></span></span><?php if ($s['info'] !== ''): ?><small><?= esc($s['info']) ?></small><?php endif ?></li>
+                            <?php endforeach ?>
+                        </ol>
+                        <?php if (($stats['pantau'][$k] ?? []) === []): ?><div class="small text-muted pantau-kosong" data-pantau-kosong="<?= $k ?>">Tidak ada</div><?php else: ?><div class="small text-muted pantau-kosong d-none" data-pantau-kosong="<?= $k ?>">Tidak ada</div><?php endif ?>
+                    </div>
+                </div>
+            <?php endforeach ?>
+        </div>
+    </div>
+</div>
+<?php endif ?>
 
 <?php if ($isAdmin): ?>
 <div class="card">

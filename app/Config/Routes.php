@@ -27,6 +27,8 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->post('tools/akun/simpan', 'Tools::simpanAkun');
     $routes->post('tools/akun/hapus/(:num)', 'Tools::hapusAkun/$1');
     $routes->get('tools/backup', 'Tools::backup');
+    $routes->get('tools/jejak', 'Tools::jejak');
+    $routes->get('tools/log_export', 'Tools::logExport');
     $routes->post('tools/bersihkan_sesi', 'Tools::bersihkanSesi');
 
     $routes->get('pengawas', 'PengawasController::index');
@@ -63,6 +65,7 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->get('status_tes/token', 'StatusTes::token');
     $routes->get('token', 'StatusTes::tokenView');
     $routes->post('status_tes/kategori', 'StatusTes::kategori');
+    $routes->post('status_tes/sesi', 'StatusTes::sesi');
     $routes->post('status_tes/release', 'StatusTes::release');
     $routes->post('status_tes/token_setting', 'StatusTes::tokenSetting');
     $routes->post('status_tes/reset', 'StatusTes::reset');
