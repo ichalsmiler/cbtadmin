@@ -30,7 +30,10 @@ Meniru AIOCBT CBTAdmin (lms.sman2makassar.sch.id/cbtadmin). Semua teks UI berbah
   matikan rememberusername/autolang di halaman login Moodle, rsync HA berprioritas rendah.
 
 ## Struktur kode panel (`app/`)
-- `Controllers/PanelController.php` — basis: `render()`, `myRuang()` (ruang pengawas), `ruangList()`, `VERSION`.
+- `Controllers/PanelController.php` — basis: `render()`, `myRuang()` (ruang pengawas), `ruangList()`, `VERSION`;
+  pengawas hanya melihat/menindak siswa ruangnya di sesi aktif: `siswaSesi()`, `saringSesi($rows)`, `moodleIdsSesi()`
+  (Peserta ruang, Status Peserta, Login ganda, Reset Login, Blokir Siswa); tanpa sesi aktif daftar kosong + peringatan
+  di layout (`sesiBelumPengawas`); `Tingkat::dariRequest()` pengawas bawaan = tingkatan sesi aktif.
 - `Filters/Guard.php` — login, CSRF, timeout, role. `PROKTOR_PATHS` = menu yang boleh untuk pengawas (role `proktor`).
 - `Views/layout/main.php` — array `$menu` sidebar; admin menyembunyikan `token`,`kehadiran`; Reset Login muncul
   hanya bila setting `lock_login`=1. Tombol "Kembali ke Admin" saat Tukar Akses (`session tukar_dari`).
@@ -38,7 +41,8 @@ Meniru AIOCBT CBTAdmin (lms.sman2makassar.sch.id/cbtadmin). Semua teks UI berbah
 - JS `public/assets/js/panel.js`: `data-post`+`data-fields`+`data-confirm-text` (POST via `#postForm`),
   `data-confirm-button` (form massal), `data-fill-modal`+`data-fill` (isi modal), `table.datatable` (DataTables,
   `data-order-col`), `a[data-pdf]`/`form[data-pdf]` (pratinjau PDF di `#pdfModal`, Unduh = `?unduh=1` → attachment
-  di `Pdf::respond`). CSS `public/assets/css/panel.css`.
+  di `Pdf::respond`; `?cetak=1` = HTML siap print browser tanpa dompdf, gambar via `tools/gambar/*`, dipakai tombol Cetak
+  Kartu Peserta (`data-no-pdf`) dan Cetak ID Login). CSS `public/assets/css/panel.css`.
 - Server utama RAM 1 GB: dompdf maks ±400 kartu per PDF (`Dokumen::MAKS_KARTU`, lebih → daftar tautan per
   ruang/kelas `dokumen/kartu_bagian`); gambar di PDF besar pakai path berkas (chroot `writable/uploads`), bukan data-URI.
 - Partial `Views/partials/filter_tingkat.php` (select Tingkatan X/XI/XII lalu "Semua", `Libraries/Tingkat.php`);
@@ -57,7 +61,7 @@ Menu → controller:
 | Laporan Kehadiran | Kehadiran | absensi pengawas: hanya siswa sesi aktif (`Absensi::forRuang($ruang,$tgl,$sesi)`; tanpa sesi aktif pengawas lihat pesan, admin pakai filter tingkatan; simpan hanya yang tampil); kunci token per sesi aktif (`terkunciUntuk`); tidak hadir → suspend Moodle hari itu (`Absensi`); token pengawas tampil di Dashboard (`partials/token_card`, menu Token dihapus, `/token` → dashboard) dan terkunci sampai ada absensi ruangnya hari ini (`ActiveTest::terkunciUntuk`, `mapelAktif`) |
 | Blokir Siswa | BlokirSiswa | `Libraries/Blokir.php`, tabel `blokir`; tidak dibuka oleh absensi |
 | Daftar Ruang | Ruang | kode login pengawas `NPSN-<huruf><no><2 acak>` (`Pengawas::usernameFor`), password 4 huruf kapital (`Pengawas::randomPassword`), Tukar Akses, Generate Kode, Cetak ID Login (`pdf/id_login`), nama lab (`ruang.lokasi`) |
-| Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: logo sekolah kiri + logo kanan `logo2` dari Info Sekolah, jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir; Laporan Kehadiran admin `dokumen/laporan_kehadiran` 2 tab: `?tab=pengawas` (rekap absensi pengawas, `Absensi::rekap($tgl,$tingkat)`, view `dokumen/absensi`; alamat lama `dokumen/absensi` dialihkan) dan `?tab=ujian` (hadir = punya attempt, berita acara) |
+| Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: logo sekolah kiri + logo kanan `logo2` dari Info Sekolah, sama besar via `School::gayaLogo`; catatan kiri + tanda tangan kepala sekolah kanan bila nama kepala diisi; jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir; Laporan Kehadiran admin `dokumen/laporan_kehadiran` 2 tab: `?tab=pengawas` (rekap absensi pengawas, `Absensi::rekap($tgl,$tingkat)`, view `dokumen/absensi`; alamat lama `dokumen/absensi` dialihkan) dan `?tab=ujian` (hadir = punya attempt, berita acara) |
 | Hasil Ujian / No Attempt | HasilUjian / NoAttempt | tab `?tab=cepat` "Selesai terlalu cepat" (pw/pm/pn: % batas waktu, % median, % nilai); tab `?tab=analisis` + `export_analisis` (P kesukaran, D daya beda 27%) dan `export_soal` (B/S/–/? per nomor) via `Libraries/AnalisisSoal` (langkah terakhir question_attempt_steps dari attempt selesai terakhir) |
 | Tools | Tools | accordion: Moodle Tools (Kelola Test `tools/test_manage`, Cron, Purge/Delete cache, Anti Submit) + CBTAdmin Tools (Info Sekolah, Info Kegiatan, Lock/Resume/Anti Newtab, Ganti Password) + Lainnya (akun, panel, backup, log) |
 

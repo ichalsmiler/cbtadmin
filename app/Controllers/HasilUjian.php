@@ -99,7 +99,7 @@ class HasilUjian extends PanelController
         $rows = [];
         foreach ($an['butir'] as $b) {
             $rows[] = [
-                $b['no'], $b['nama'], $b['teks'], $b['benar'], $b['salah'], $b['kosong'],
+                $b['no'], $b['teks'] !== '' ? $b['teks'] : $b['nama'], $b['benar'], $b['salah'], $b['kosong'],
                 $b['p'] === null ? '' : number_format($b['p'], 2, ',', ''), $b['tingkat'],
                 $b['d'] === null ? '' : number_format($b['d'], 2, ',', ''), $b['kualitas'],
             ];
@@ -108,7 +108,7 @@ class HasilUjian extends PanelController
 
         return $this->response->download(
             'analisis_' . preg_replace('/[^A-Za-z0-9]+/', '_', $data['quiz']['name']) . '_' . date('Ymd_His') . '.xlsx',
-            Excel::build(['no', 'nama_soal', 'teks_soal', 'benar', 'salah', 'kosong', 'indeks_kesukaran', 'tingkat', 'daya_beda', 'kualitas'], $rows)
+            Excel::build(['no', 'soal', 'benar', 'salah', 'kosong', 'indeks_kesukaran', 'tingkat', 'daya_beda', 'kualitas'], $rows)
         );
     }
 

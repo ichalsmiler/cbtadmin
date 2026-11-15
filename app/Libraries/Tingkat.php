@@ -29,6 +29,13 @@ class Tingkat
     public static function dariRequest(): string
     {
         $raw = service('request')->getGet('tingkat');
+        if ($raw === null && session()->get('admin_ruang') !== null) {
+            // Pengawas ruang: bawaan mengikuti tingkatan sesi aktif (mis. sesi Kelas XII → XII).
+            $sesi = ActiveTest::sesiAktif();
+            if ($sesi !== null && in_array($sesi['tingkat'], self::LIST, true)) {
+                return $sesi['tingkat'];
+            }
+        }
         if ($raw === null) {
             $simpan = session()->get('filter_tingkat');
 

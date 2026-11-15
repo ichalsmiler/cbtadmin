@@ -22,7 +22,7 @@ class BlokirSiswa extends PanelController
         }
 
         $tingkat = Tingkat::dariRequest();
-        $rows    = ($ruangId === null && ! $isAdmin) ? [] : Blokir::daftar($ruangId);
+        $rows    = ($ruangId === null && ! $isAdmin) ? [] : $this->saringSesi(Blokir::daftar($ruangId));
         $rows    = array_values(array_filter($rows, static fn ($r) => Tingkat::cocok($r['kelas'], $tingkat)));
         if ($this->request->getGet('aktif') === '1') {
             $rows = array_values(array_filter($rows, static fn ($r) => $r['diblokir_at'] !== null));
@@ -37,7 +37,7 @@ class BlokirSiswa extends PanelController
             'ruangId'   => $ruangId,
             'tingkat'   => $tingkat,
             'hanyaAktif' => $this->request->getGet('aktif') === '1',
-            'jumlahAktif' => count(array_filter(Blokir::daftar($this->myRuang()), static fn ($r) => $r['diblokir_at'] !== null)),
+            'jumlahAktif' => count(array_filter($this->saringSesi(Blokir::daftar($this->myRuang())), static fn ($r) => $r['diblokir_at'] !== null)),
         ]);
     }
 
@@ -91,9 +91,10 @@ class BlokirSiswa extends PanelController
             return false;
         }
 
+        // Pengawas: siswa ruangnya yang ikut sesi aktif.
         return $this->myRuang() === null
             ? session()->get('admin_role') === 'admin'
-            : (int) $p['ruang_id'] === $this->myRuang();
+            : in_array($p['username'] ?? '', $this->siswaSesi() ?? [], true);
     }
 
     private function peserta(int $pid): ?array

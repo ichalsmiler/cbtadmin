@@ -55,7 +55,8 @@ class Dokumen extends PanelController
         uksort($groups, 'strnatcasecmp');
 
         // Terlalu banyak untuk satu PDF (dompdf kehabisan memori di server 1 GB): tampilkan tautan per kelompok.
-        if (count($rows) > self::MAKS_KARTU && count($groups) > 1) {
+        // Cetak lewat browser (?cetak=1) tidak memakai dompdf, jadi semua kartu boleh sekaligus.
+        if (! $this->request->getGet('cetak') && count($rows) > self::MAKS_KARTU && count($groups) > 1) {
             $query = $this->request->getGet();
             unset($query['unduh']);
             $links = [];

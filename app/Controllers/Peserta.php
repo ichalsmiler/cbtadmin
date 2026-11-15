@@ -25,7 +25,7 @@ class Peserta extends PanelController
 
         return $this->render('peserta/ruang', [
             'title'     => 'Daftar Peserta' . ($ruang ? ' · Ruang ' . $ruang['nama'] : ''),
-            'rows'      => $ruangId !== '' ? $this->pesertaRows('', $ruangId) : [],
+            'rows'      => $ruangId !== '' ? $this->saringSesi($this->pesertaRows('', $ruangId)) : [],
             'ruang'     => $ruang,
             'ruangId'   => $ruangId,
             'ruangList' => $this->ruangList(),

@@ -34,7 +34,7 @@ class StatusPeserta extends PanelController
                     $quiz = $q;
                 }
             }
-            $rows = QuizStatus::filter($quiz ? QuizStatus::forQuiz($quiz) : QuizStatus::allQuizzes(), $ruangId, '', Tingkat::dariRequest());
+            $rows = $this->saringSesi(QuizStatus::filter($quiz ? QuizStatus::forQuiz($quiz) : QuizStatus::allQuizzes(), $ruangId, '', Tingkat::dariRequest()));
         } catch (\Throwable $e) {
             $error = true;
             log_message('error', 'Status Peserta: ' . $e->getMessage());
@@ -117,6 +117,7 @@ class StatusPeserta extends PanelController
                 usort($ips, static fn ($a, $b) => (int) $a['pertama'] <=> (int) $b['pertama']);
                 $rows[] = $info + ['ips' => $ips, 'jumlah_ip' => count($ips)];
             }
+            $rows = $this->saringSesi($rows);
             usort($rows, static fn ($a, $b) => [-$a['jumlah_ip'], (string) $a['ruang_nama'], $a['nama']] <=> [-$b['jumlah_ip'], (string) $b['ruang_nama'], $b['nama']]);
         } catch (\Throwable $e) {
             $error = true;
@@ -146,7 +147,7 @@ class StatusPeserta extends PanelController
         }
         // Pengawas ruang hanya boleh menindak siswa di ruangnya.
         if ($this->myRuang() !== null) {
-            $allowed = Pengawas::moodleIdsInRuang($this->myRuang());
+            $allowed = $this->moodleIdsSesi() ?? [];
             foreach ($pairs as $quizId => $userIds) {
                 $pairs[$quizId] = array_values(array_intersect($userIds, $allowed));
                 if ($pairs[$quizId] === []) {

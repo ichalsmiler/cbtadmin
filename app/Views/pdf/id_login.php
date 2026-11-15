@@ -4,6 +4,9 @@
 $kegiatan  = mb_strtoupper($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer');
 $logoFile  = \App\Libraries\School::logoPath();
 $logo2File = \App\Libraries\School::logo2Path();
+// Logo kiri dan kanan dimuat ke kotak persegi yang sama (proporsi tetap) agar tampak sama besar.
+$gayaLogo  = \App\Libraries\School::gayaLogo($logoFile);
+$gayaLogo2 = \App\Libraries\School::gayaLogo($logo2File);
 ?>
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
@@ -16,9 +19,9 @@ $logo2File = \App\Libraries\School::logo2Path();
     .id .head { width: 100%; border-collapse: collapse; border-bottom: 1px solid #555; }
     .id .head td { padding: 1.5mm 2mm; vertical-align: middle; }
     .id .head .logo { width: 13mm; }
-    .id .head .logo img { height: 11mm; width: auto; }
+    .id .head .logo img { vertical-align: middle; }
     .id .head .logo2 { width: 13mm; text-align: right; }
-    .id .head .logo2 img { height: 11mm; width: auto; }
+    .id .head .logo2 img { vertical-align: middle; }
     .id .head .judul { text-align: center; font-weight: bold; font-size: 9pt; line-height: 1.25; }
     .id .isi { text-align: center; height: 31mm; padding-top: 5mm; }
     .id .kode { font-size: 16pt; margin-bottom: 2mm; }
@@ -43,9 +46,9 @@ $logo2File = \App\Libraries\School::logo2Path();
                     <td>
                         <div class="id">
                             <table class="head"><tr>
-                                <td class="logo"><?php if ($logoFile): ?><img src="<?= esc($logoFile, 'attr') ?>" alt=""><?php endif ?></td>
+                                <td class="logo"><?php if ($logoFile): ?><img src="<?= esc($logoFile, 'attr') ?>" style="<?= $gayaLogo ?>" alt=""><?php endif ?></td>
                                 <td class="judul"><?= esc($kegiatan) ?><br>KODE LOGIN PENGAWAS</td>
-                                <td class="logo2"><?php if ($logo2File): ?><img src="<?= esc($logo2File, 'attr') ?>" alt=""><?php endif ?></td>
+                                <td class="logo2"><?php if ($logo2File): ?><img src="<?= esc($logo2File, 'attr') ?>" style="<?= $gayaLogo2 ?>" alt=""><?php endif ?></td>
                             </tr></table>
                             <div class="isi">
                                 <div class="kode"><?= esc($r['username'] ?? '–') ?></div>

@@ -33,6 +33,22 @@ class School
         ];
     }
 
+    /**
+     * Gaya <img> agar gambar masuk kotak persegi $kotakMm × $kotakMm dengan proporsi tetap
+     * (logo kiri/kanan tampak sama besar walau berkas unggahan beda ukuran). dompdf tidak mendukung object-fit,
+     * jadi lebar/tinggi dihitung dari ukuran asli gambar.
+     */
+    public static function gayaLogo(?string $path, float $kotakMm = 11): string
+    {
+        $ukuran = $path ? @getimagesize($path) : false;
+        if (! $ukuran || $ukuran[0] <= 0 || $ukuran[1] <= 0) {
+            return 'height:' . $kotakMm . 'mm;width:auto';
+        }
+        $skala = $kotakMm / max($ukuran[0], $ukuran[1]);
+
+        return sprintf('width:%.2fmm;height:%.2fmm', $ukuran[0] * $skala, $ukuran[1] * $skala);
+    }
+
     public static function logoPath(): ?string
     {
         return self::gambar('logo_file');

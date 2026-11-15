@@ -90,6 +90,9 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
 <main class="content">
     <h1 class="page-title"><?= esc($title) ?></h1>
 
+    <?php if (! empty($sesiBelumPengawas) && ! in_array($current, ['', 'dashboard', 'kehadiran'], true)): ?>
+        <div class="alert alert-warning" role="status">Sesi belum diaktifkan oleh proktor. Daftar siswa muncul setelah sesi ujian diaktifkan.</div>
+    <?php endif ?>
     <?php foreach (['success' => 'success', 'error' => 'danger'] as $key => $class): ?>
         <?php if (session()->getFlashdata($key)): ?>
             <div class="alert alert-<?= $class ?> alert-dismissible fade show" role="alert">

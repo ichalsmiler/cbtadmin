@@ -20,7 +20,7 @@ $sudah = count(array_filter($rows, static fn ($r) => $r['status'] !== null));
         <?php if ($sesi !== null): ?>
             <div class="mb-2"><span class="badge text-bg-info fw-normal"><i class="bi bi-calendar-check me-1"></i>Sesi aktif: <?= esc($sesi['label']) ?></span></div>
         <?php endif ?>
-        <form class="d-flex flex-wrap gap-3 align-items-end mb-3" method="get" action="<?= site_url('kehadiran') ?>" id="absenFilter">
+        <form class="d-flex flex-wrap gap-3 align-items-end mb-3 dt-toolbar" method="get" action="<?= site_url('kehadiran') ?>" id="absenFilter">
             <?php if ($isAdmin): ?>
                 <input type="hidden" name="ruang" value="<?= (int) $ruang['id'] ?>">
                 <input type="hidden" name="tanggal" value="<?= esc($tanggal, 'attr') ?>">

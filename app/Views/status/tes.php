@@ -38,7 +38,8 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
         </div>
     </div>
     <div class="card-body">
-        <label class="form-label" for="tokenValue">Token</label>
+        <label class="tes-judul" for="tokenValue">Token</label>
+        <p class="tes-ket">Dipasang sebagai password semua quiz di tes aktif.</p>
         <form class="row g-2 mb-1" method="post" action="<?= site_url('status_tes/release') ?>">
             <?= csrf_field() ?>
             <div class="col-md-9">
@@ -51,7 +52,7 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
                 </button>
             </div>
         </form>
-        <p class="small text-muted mb-4" id="tokenInfo">
+        <p class="small text-muted mb-0" id="tokenInfo">
             <?php if (! $tokenEnabled): ?>
                 Quiz di tes ini bisa dimulai tanpa token.
             <?php elseif ($nextRelease > 0): ?>
@@ -64,8 +65,10 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
 
         <form method="post" action="<?= site_url('status_tes/kategori') ?>">
             <?= csrf_field() ?>
-            <label class="form-label" for="sesi_id">Aktifkan untuk Sesi <span class="text-muted small">(wajib dipilih sebelum ujian diaktifkan)</span></label>
-            <select class="form-select mb-4" id="sesi_id" name="sesi_id" required>
+            <div class="tes-bagian">
+                <label class="tes-judul" for="sesi_id">Sesi ujian</label>
+                <p class="tes-ket">Wajib dipilih. Pengawas hanya melihat siswa sesi ini.</p>
+            <select class="form-select" id="sesi_id" name="sesi_id" required>
                 <option value="">Pilih Sesi</option>
                 <?php foreach ($sesiList as $s): ?>
                     <option value="<?= $s['id'] ?>" <?= $s['id'] === $sesiPilih ? 'selected' : '' ?>>
@@ -74,10 +77,13 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
                 <?php endforeach ?>
             </select>
             <?php if ($sesiList === []): ?>
-                <div class="alert alert-warning small py-2 mt-n3 mb-4">Belum ada sesi. Impor peserta (kolom sesi) atau tambah sesi di Daftar Ruang.</div>
+                <div class="alert alert-warning small py-2 mt-2 mb-0">Belum ada sesi. Impor peserta (kolom sesi) atau tambah sesi di Daftar Ruang.</div>
             <?php endif ?>
+            </div>
 
-            <label class="form-label" for="kat_id">Daftar Tes <span class="text-muted small">(kategori kursus Moodle)</span></label>
+            <div class="tes-bagian">
+            <label class="tes-judul" for="kat_id">Tes</label>
+            <p class="tes-ket">Kategori kursus Moodle yang dibuka untuk ujian.</p>
             <select class="form-select" id="kat_id" name="kat_id" required>
                 <option value="">Pilih Test</option>
                 <?php foreach ($categories as $c): ?>
@@ -86,17 +92,21 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
                     </option>
                 <?php endforeach ?>
             </select>
+            <?php if ($shown && $shownId !== $catId): ?>
+                <div class="alert alert-warning small py-2 mt-3 mb-0">
+                    Anda sedang melihat <strong><?= esc($shown['name']) ?></strong>. Klik <strong>Simpan</strong> untuk menjadikannya tes aktif
+                    <?= $category ? '(menggantikan ' . esc($category['name']) . ')' : '' ?>.
+                </div>
+            <?php endif ?>
+            </div>
 
             <?php if ($shown): ?>
-                <?php if ($shownId !== $catId): ?>
-                    <div class="alert alert-warning small py-2 mt-3 mb-0">
-                        Anda sedang melihat <strong><?= esc($shown['name']) ?></strong>. Klik <strong>Simpan</strong> untuk menjadikannya tes aktif
-                        <?= $category ? '(menggantikan ' . esc($category['name']) . ')' : '' ?>.
+            <div class="tes-bagian">
+                <div class="d-flex flex-wrap align-items-start gap-2 mb-2">
+                    <div>
+                        <span class="tes-judul">Mata pelajaran</span>
+                        <p class="tes-ket mb-0">Isi <?= esc($shown['name']) ?>. Hanya mapel yang aktif tampil untuk siswa.</p>
                     </div>
-                <?php endif ?>
-
-                <div class="d-flex flex-wrap align-items-center gap-2 mt-4 mb-2">
-                    <span class="form-label mb-0">Mata Pelajaran <span class="text-muted small">(isi kategori <?= esc($shown['name']) ?>)</span></span>
                     <?php if ($courses !== []): ?>
                         <span class="ms-auto d-flex gap-2">
                             <button class="btn btn-outline-secondary btn-sm" type="button" data-mapel-all="1">Aktifkan semua</button>
@@ -124,9 +134,10 @@ $indent   = static fn ($c) => str_repeat('— ', max(0, (int) $c['depth'] - 1));
                     </div>
                     <p class="small text-muted mt-2 mb-0" id="mapelCount"></p>
                 <?php endif ?>
+            </div>
             <?php endif ?>
 
-            <button class="btn btn-primary mt-3" type="submit"><i class="bi bi-save me-1"></i>Simpan</button>
+            <button class="btn btn-primary mt-4" type="submit"><i class="bi bi-save me-1"></i>Simpan</button>
         </form>
     </div>
 </div>

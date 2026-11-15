@@ -146,6 +146,8 @@
     document.addEventListener('submit', function (event) {
         var form = event.target;
         if (!form.matches || !form.matches('form[data-pdf]')) { return; }
+        // Tombol data-no-pdf (cetak lewat browser): biarkan formulir terkirim biasa ke tab baru.
+        if (event.submitter && event.submitter.hasAttribute('data-no-pdf')) { return; }
         event.preventDefault();
         var submitter = event.submitter;
         var action = (submitter && submitter.getAttribute('formaction')) || form.action;

@@ -12,8 +12,11 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
             <button class="btn btn-outline-primary btn-sm" type="button" data-ruang='{"id":"","nama":"","kapasitas":"","pengawas":"","sesi_id":""}'>
                 <i class="bi bi-plus-lg me-1"></i>Tambah Ruang
             </button>
-            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_ruang/cetak') ?>" target="_blank" data-pdf>
+            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_ruang/cetak') ?>?cetak=1" target="_blank">
                 <i class="bi bi-printer me-1"></i>Cetak ID Login
+            </a>
+            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_ruang/cetak') ?>" target="_blank" data-pdf title="Pratinjau PDF ID Login">
+                <i class="bi bi-file-earmark-pdf"></i><span class="visually-hidden">ID Login PDF</span>
             </a>
         </div>
     </div>

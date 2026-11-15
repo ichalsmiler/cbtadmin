@@ -33,7 +33,7 @@ $bars = $isAdmin ? [
 <?php if ($sesiAktif !== null): ?>
     <div class="alert alert-info d-flex flex-wrap align-items-center gap-2 py-2" role="status">
         <i class="bi bi-calendar-check"></i>
-        <span>Sesi aktif: <strong><?= esc($sesiAktif['label']) ?></strong><?php if ($isAdmin): ?> · <?= number_format($sesiAktif['jumlah'], 0, ',', '.') ?> peserta<?php endif ?></span>
+        <span>Sesi aktif: <strong><?= esc($sesiAktif['label']) ?></strong></span>
         <?php if ($isAdmin): ?><a class="alert-link ms-auto small" href="<?= site_url('status_tes') ?>">Ganti sesi</a><?php endif ?>
     </div>
 <?php else: ?>

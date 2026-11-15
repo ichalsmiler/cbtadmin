@@ -60,6 +60,7 @@ class ResetLogin extends PanelController
             $error = true;
             log_message('error', 'Reset Login: ' . $e->getMessage());
         }
+        $rows = $this->saringSesi($rows);
 
         return $this->render('reset_login/index', [
             'title'     => 'Reset Login Peserta',
@@ -80,12 +81,16 @@ class ResetLogin extends PanelController
 
         $ruangId = (int) $this->request->getPost('ruang_id');
         if ($this->myRuang() !== null) {
-            // Pengawas ruang hanya boleh mereset siswa di ruangnya.
+            // Pengawas ruang hanya boleh mereset siswa ruangnya yang ikut sesi aktif.
+            $boleh = $this->moodleIdsSesi() ?? [];
             if ($ruangId > 0) {
-                $ruangId = $this->myRuang();
+                $ruang = db_connect()->table('ruang')->select('nama')->where('id', $this->myRuang())->get()->getRowArray();
+                $ids   = $boleh;
+                $label = 'ruang ' . ($ruang['nama'] ?? $this->myRuang()) . ' (sesi aktif)';
             } else {
-                $ids = array_values(array_intersect($ids, Pengawas::moodleIdsInRuang($this->myRuang())));
+                $ids = array_values(array_intersect($ids, $boleh));
             }
+            $ruangId = 0;
         }
         if ($ruangId > 0) {
             $ruang     = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
