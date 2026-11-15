@@ -218,6 +218,32 @@
         }
     });
 
+    // ---------------------------------------------------------------- Kelas mengikuti Tingkatan
+    // Pilihan Kelas hanya berisi kelas dari Tingkatan terpilih; Tingkatan diganti → Kelas kembali ke
+    // pilihan pertama ("Semua kelas"). Listener capture supaya jalan sebelum onchange="this.form.submit()".
+    var tingkatOf = function (kelas) {
+        var m = /^\s*(XII|XI|X)(?![A-Z])/i.exec(kelas || '');
+        return m ? m[1].toUpperCase() : '';
+    };
+    var saringKelas = function (tingkat, kelas, reset) {
+        Array.prototype.forEach.call(kelas.options, function (opt, i) {
+            var tampil = i === 0 || tingkat.value === '' || tingkatOf(opt.value) === tingkat.value;
+            opt.hidden = !tampil;
+            opt.disabled = !tampil;
+        });
+        if (reset || kelas.selectedOptions[0] && kelas.selectedOptions[0].hidden) {
+            kelas.selectedIndex = 0;
+        }
+    };
+    var tingkatSel = document.getElementById('fTingkat');
+    var kelasSel = document.getElementById('fKelas');
+    if (tingkatSel && kelasSel && tingkatSel.form === kelasSel.form) {
+        saringKelas(tingkatSel, kelasSel, false);
+        document.addEventListener('change', function (e) {
+            if (e.target === tingkatSel) { saringKelas(tingkatSel, kelasSel, true); }
+        }, true);
+    }
+
     // ---------------------------------------------------------------- Lain-lain
     var updateButton = document.getElementById('btnCekUpdate');
     if (updateButton) {
