@@ -112,7 +112,7 @@ $input = static fn (string $name, string $label, string $value, string $ph = '',
     <div class="accordion accordion-flush" id="lainTools">
         <?php ob_start(); ?>
         <div class="d-flex mb-2">
-            <span class="small text-muted">Akun administrator dan proktor panel. Akun pengawas ruang dibuat otomatis di Daftar Ruang.</span>
+            <span class="small text-muted">Akun administrator dan pengawas panel. Akun pengawas ruang dibuat otomatis di Daftar Ruang.</span>
             <button class="btn btn-primary btn-sm ms-auto" type="button" data-fill-modal="#akunModal"
                     data-fill='{"id":"","username":"","nama":"","role":"admin","aktif":"1","password":""}'><i class="bi bi-person-plus me-1"></i>Tambah akun</button>
         </div>

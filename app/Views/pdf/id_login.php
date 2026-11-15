@@ -1,5 +1,5 @@
 <?php
-// Kartu kode login pengawas (seperti contoh AIOCBT): logo sekolah kiri, kegiatan + "KODE LOGIN PROKTOR", logo kanan
+// Kartu kode login pengawas (seperti contoh AIOCBT): logo sekolah kiri, kegiatan + "KODE LOGIN PENGAWAS", logo kanan
 // (logo2, sama dengan kartu peserta); kode login besar, password, ruang. 10 kartu per halaman A4.
 $kegiatan  = mb_strtoupper($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer');
 $logoFile  = \App\Libraries\School::logoPath();
@@ -44,7 +44,7 @@ $logo2File = \App\Libraries\School::logo2Path();
                         <div class="id">
                             <table class="head"><tr>
                                 <td class="logo"><?php if ($logoFile): ?><img src="<?= esc($logoFile, 'attr') ?>" alt=""><?php endif ?></td>
-                                <td class="judul"><?= esc($kegiatan) ?><br>KODE LOGIN PROKTOR</td>
+                                <td class="judul"><?= esc($kegiatan) ?><br>KODE LOGIN PENGAWAS</td>
                                 <td class="logo2"><?php if ($logo2File): ?><img src="<?= esc($logo2File, 'attr') ?>" alt=""><?php endif ?></td>
                             </tr></table>
                             <div class="isi">

@@ -51,7 +51,7 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
             </button>
         </form>
     <?php endif ?>
-    <span class="role <?= session()->get('tukar_dari') ? '' : 'ms-auto' ?>" title="<?= esc($adminNama) ?>"><?= $adminRole === 'admin' ? 'ADMINISTRATOR' : 'PROKTOR' ?></span>
+    <span class="role <?= session()->get('tukar_dari') ? '' : 'ms-auto' ?>" title="<?= esc($adminNama) ?>"><?= $adminRole === 'admin' ? 'ADMINISTRATOR' : 'PENGAWAS' ?></span>
 </header>
 
 <nav class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar">
