@@ -34,7 +34,7 @@ Menu → controller:
 | Menu | Controller | Catatan |
 |---|---|---|
 | Dashboard | Dashboard | stat via `dashboard/stats` (JSON) |
-| Daftar Peserta | Peserta | pengawas: `peserta_ruang` (`Peserta::ruang`, baca saja, ruangnya; tautan kotak siswa di dashboard); impor AIOCBT (`Excel::read`, header baris 9), No. Peserta = username bila kosong |
+| Daftar Peserta | Peserta | pengawas: `peserta_ruang` (`Peserta::ruang`, baca saja, ruangnya; tautan kotak siswa di dashboard); impor AIOCBT (`Excel::read`, header baris 9), No. Peserta = username bila kosong; Reset Peserta (ketik HAPUS) / centang "Hapus data lama" saat impor → `hapusSemua()` (buka suspend Moodle siswa terblokir, kosongkan peserta+absensi+blokir; centang `ruang=1` di Reset ikut hapus ruang, sesi, akun pengawas; akun Moodle tetap) |
 | Status Test / Token | StatusTes | kategori Moodle = tes; simpan → hanya mapel dicentang + kategori itu tampil, lainnya disembunyikan; token bersama (`ActiveTest`, cron `cbt:token`) |
 | Status Peserta | StatusPeserta | paksa submit, tambah waktu; tombol "Hapus attempt…" (admin) → HapusAttempt; "Login ganda" `status_peserta/login_ganda` (log user_loggedin per IP per tanggal) |
 | Reset Login | ResetLogin | hanya dipakai saat Lock login aktif |

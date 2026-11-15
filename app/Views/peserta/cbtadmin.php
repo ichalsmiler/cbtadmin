@@ -34,6 +34,7 @@
             </button>
             <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload me-1"></i>Import Excel</button>
             <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_peserta/cbtadmin/export') . ($query !== '' ? '?' . $query : '') ?>"><i class="bi bi-download me-1"></i>Export Excel</a>
+            <button class="btn btn-outline-danger btn-sm" type="button" data-bs-toggle="modal" data-bs-target="#resetModal"><i class="bi bi-trash3 me-1"></i>Reset Peserta</button>
         </div>
     </div>
 </div>
@@ -148,10 +149,15 @@
                 <p class="mb-2">Isi <a href="<?= site_url('daftar_peserta/cbtadmin/template') ?>">template peserta</a>, lalu unggah di sini.</p>
                 <ul class="small text-muted ps-3">
                     <li>Kolom wajib: <code>nama</code> dan <code>username</code>.</li>
-                    <li>Username yang sudah ada akan diperbarui, bukan digandakan.</li>
+                    <li>Username yang sudah ada akan diperbarui, bukan digandakan. Peserta yang tidak ada di berkas tetap disimpan.</li>
                     <li>Password kosong dibuat acak. Ruang dan sesi yang belum ada dibuat otomatis.</li>
                 </ul>
                 <input class="form-control" type="file" name="berkas" accept=".xlsx,.xls,.csv" required>
+                <div class="form-check mt-3">
+                    <input class="form-check-input" type="checkbox" name="ganti" value="1" id="importGanti">
+                    <label class="form-check-label" for="importGanti">Hapus semua data lama sebelum impor</label>
+                    <div class="form-text text-danger">Semua peserta, absensi, dan blokir diganti isi berkas. Password yang kosong di berkas dibuat ulang, jadi kartu login lama tidak berlaku.</div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -160,4 +166,36 @@
         </form>
     </div>
 </div>
+
+<div class="modal fade" id="resetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="post" action="<?= site_url('daftar_peserta/cbtadmin/reset') ?>" autocomplete="off">
+            <?= csrf_field() ?>
+            <div class="modal-header"><h5 class="modal-title text-danger">Reset Peserta</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button></div>
+            <div class="modal-body">
+                <p>Semua peserta di Data CBTAdmin akan dihapus, beserta absensi dan blokirnya. Tindakan ini tidak bisa dibatalkan.</p>
+                <ul class="small text-muted ps-3">
+                    <li>Akun Moodle siswa tidak ikut terhapus. Siswa yang sedang diblokir dibuka dulu di Moodle.</li>
+                    <li>Token pengawas terkunci lagi sampai absensi diisi ulang.</li>
+                </ul>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" name="ruang" value="1" id="resetRuang">
+                    <label class="form-check-label" for="resetRuang">Hapus juga daftar ruang, sesi, dan akun pengawas</label>
+                    <div class="form-text">Bila tidak dicentang, ruang (beserta nama lab) dan kode login pengawas tetap ada. Bila dicentang, semuanya dibuat ulang saat impor berikutnya dengan kode dan password baru, jadi kartu ID Login harus dicetak ulang.</div>
+                </div>
+                <label class="form-label" for="resetKonfirmasi">Ketik <strong>HAPUS</strong> untuk melanjutkan</label>
+                <input class="form-control" type="text" name="konfirmasi" id="resetKonfirmasi" required>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-danger" id="resetOk" disabled>Hapus semua peserta</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+document.getElementById('resetKonfirmasi').addEventListener('input', function () {
+    document.getElementById('resetOk').disabled = this.value.trim() !== 'HAPUS';
+});
+</script>
 <?= $this->endSection() ?>

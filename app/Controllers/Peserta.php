@@ -155,6 +155,73 @@ class Peserta extends PanelController
         return redirect()->back()->with('success', 'Ruang/sesi diterapkan ke ' . count($ids) . ' peserta.');
     }
 
+    /** Hapus semua Data CBTAdmin (harus mengetik HAPUS). Akun Moodle tidak ikut terhapus. */
+    public function reset()
+    {
+        if (trim((string) $this->request->getPost('konfirmasi')) !== 'HAPUS') {
+            return redirect()->back()->with('error', 'Ketik HAPUS untuk mengonfirmasi reset peserta.');
+        }
+
+        $ruang = $this->request->getPost('ruang') === '1';
+        try {
+            $jumlah = $this->hapusSemua($ruang);
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Reset dibatalkan: ' . $e->getMessage());
+        }
+        ActivityLog::add('reset_peserta', $jumlah . ' peserta dihapus' . ($ruang ? ', termasuk ruang, sesi, dan akun pengawas' : ''));
+
+        return redirect()->to(site_url('daftar_peserta/cbtadmin'))->with('success', "$jumlah peserta dihapus dari Data CBTAdmin"
+            . ($ruang ? ', beserta daftar ruang, sesi, dan akun pengawas' : '') . '. Akun Moodle tidak ikut terhapus.');
+    }
+
+    /**
+     * Kosongkan peserta beserta absensi dan blokirnya. Siswa yang sedang di-suspend karena blokir atau
+     * absensi hari ini dibuka dulu di Moodle supaya tidak tertinggal terkunci tanpa catatan di panel.
+     * $ruang: ikut kosongkan ruang, sesi, dan akun pengawas ruang (dibuat ulang saat impor berikutnya).
+     *
+     * @return int jumlah peserta yang dihapus
+     */
+    private function hapusSemua(bool $ruang = false): int
+    {
+        $db        = db_connect();
+        $terkunci  = array_column($db->query(
+            "SELECT DISTINCT p.username FROM peserta p
+             LEFT JOIN blokir b ON b.peserta_id = p.id AND b.aktif = 1
+             LEFT JOIN absensi a ON a.peserta_id = p.id AND a.tanggal = ? AND a.diblokir = 1
+             WHERE b.id IS NOT NULL OR a.id IS NOT NULL",
+            [date('Y-m-d')]
+        )->getResultArray(), 'username');
+        if ($terkunci !== []) {
+            $ids = array_map('intval', array_column(
+                Moodle::db()->table(Moodle::t('user'))->select('id')->where('deleted', 0)->whereIn('username', $terkunci)->get()->getResultArray(),
+                'id'
+            ));
+            if ($ids !== []) {
+                $gagal = array_filter(MoodleBridge::call('suspend_users', ['userids' => $ids, 'suspend' => false]), static fn ($i) => isset($i['error']));
+                if ($gagal !== []) {
+                    throw new \RuntimeException('blokir di Moodle gagal dibuka: ' . reset($gagal)['error']);
+                }
+            }
+        }
+
+        $jumlah = $db->table('peserta')->countAllResults();
+        $db->transStart();
+        $db->table('absensi')->emptyTable();
+        $db->table('blokir')->emptyTable();
+        $db->table('peserta')->emptyTable();
+        if ($ruang) {
+            $db->table('admins')->where('role', 'proktor')->where('ruang_id IS NOT NULL')->delete();
+            $db->table('ruang')->emptyTable();
+            $db->table('sesi')->emptyTable();
+        }
+        $db->transComplete();
+        if (! $db->transStatus()) {
+            throw new \RuntimeException('database gagal dikosongkan.');
+        }
+
+        return $jumlah;
+    }
+
     public function template()
     {
         $data = Excel::build(self::COLUMNS, [
@@ -189,6 +256,20 @@ class Peserta extends PanelController
         }
         if ($rows === [] || ! array_key_exists('nama', $rows[0])) {
             return redirect()->back()->with('error', 'Kolom "Nama" / "Nama Peserta" tidak ditemukan. Pakai template CBT Admin atau template AIOCBT.');
+        }
+
+        // "Hapus data lama": hanya bila berkas berisi peserta, supaya berkas salah tidak mengosongkan data.
+        $dihapus = 0;
+        if ($this->request->getPost('ganti') === '1') {
+            if (array_filter($rows, static fn ($r) => ($r['nama'] ?? '') !== '') === []) {
+                return redirect()->back()->with('error', 'Berkas tidak berisi peserta; data lama tidak dihapus.');
+            }
+            try {
+                $dihapus = $this->hapusSemua();
+            } catch (\Throwable $e) {
+                return redirect()->back()->with('error', 'Import dibatalkan, data lama tetap ada: ' . $e->getMessage());
+            }
+            ActivityLog::add('reset_peserta', "$dihapus peserta dihapus sebelum import");
         }
 
         $db    = db_connect();
@@ -260,7 +341,7 @@ class Peserta extends PanelController
         $pengawas = Pengawas::sync();
         ActivityLog::add('import_peserta', "$baru baru, $ubah diperbarui, " . count($gagal) . " gagal, $pengawas akun pengawas");
 
-        $message = "$baru peserta baru, $ubah diperbarui.";
+        $message = ($dihapus > 0 ? "$dihapus data lama dihapus. " : '') . "$baru peserta baru, $ubah diperbarui.";
         if ($pengawas > 0) {
             $message .= " $pengawas akun pengawas dibuat (lihat menu Pengawas).";
         }

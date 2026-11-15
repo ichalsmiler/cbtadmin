@@ -51,6 +51,7 @@ $routes->group('', ['filter' => Guard::class], static function ($routes) {
     $routes->post('daftar_peserta/cbtadmin/hapus/(:num)', 'Peserta::delete/$1');
     $routes->post('daftar_peserta/cbtadmin/massal', 'Peserta::bulk');
     $routes->post('daftar_peserta/cbtadmin/import', 'Peserta::import');
+    $routes->post('daftar_peserta/cbtadmin/reset', 'Peserta::reset');
     $routes->get('daftar_peserta/cbtadmin/template', 'Peserta::template');
     $routes->get('daftar_peserta/cbtadmin/export', 'Peserta::export');
     $routes->get('daftar_peserta/moodle', 'Peserta::moodle');
