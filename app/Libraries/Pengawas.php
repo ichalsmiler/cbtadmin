@@ -27,7 +27,7 @@ class Pengawas
             if (in_array((int) $ruang['id'], $covered, true)) {
                 continue;
             }
-            $password = Peserta::randomPassword();
+            $password = self::randomPassword();
             $db->table('admins')->insert([
                 'username'       => self::usernameFor($ruang),
                 'password_hash'  => password_hash($password, PASSWORD_DEFAULT),
@@ -60,6 +60,18 @@ class Pengawas
         } while ($db->table('admins')->where('username', $kode)->countAllResults() > 0);
 
         return $kode;
+    }
+
+    /** Password pengawas: 4 huruf kapital acak (tanpa I dan O), mis. HKYT. */
+    public static function randomPassword(): string
+    {
+        $abjad = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $pass  = '';
+        for ($i = 0; $i < 4; $i++) {
+            $pass .= $abjad[random_int(0, 23)];
+        }
+
+        return $pass;
     }
 
     /** Apakah username sudah berformat kode login dengan NPSN sekarang. */
@@ -104,7 +116,7 @@ class Pengawas
             throw new \RuntimeException('Akun pengawas tidak ditemukan.');
         }
         $username = self::usernameFor(['id' => $row['rid'], 'nama' => $row['nama']]);
-        $password = Peserta::randomPassword();
+        $password = self::randomPassword();
         $db->table('admins')->where('id', $adminId)->update([
             'username'       => $username,
             'password_hash'  => password_hash($password, PASSWORD_DEFAULT),
@@ -124,7 +136,7 @@ class Pengawas
         }
         $count = 0;
         foreach ($builder->get()->getResultArray() as $row) {
-            $password = Peserta::randomPassword();
+            $password = self::randomPassword();
             $db->table('admins')->where('id', $row['id'])->update([
                 'password_hash'  => password_hash($password, PASSWORD_DEFAULT),
                 'password_plain' => $password,

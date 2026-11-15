@@ -23,21 +23,25 @@ Meniru AIOCBT CBTAdmin (lms.sman2makassar.sch.id/cbtadmin). Semua teks UI berbah
 - `Config/Routes.php` — semua rute (grup terfilter Guard).
 - JS `public/assets/js/panel.js`: `data-post`+`data-fields`+`data-confirm-text` (POST via `#postForm`),
   `data-confirm-button` (form massal), `data-fill-modal`+`data-fill` (isi modal), `table.datatable` (DataTables,
-  `data-order-col`). CSS `public/assets/css/panel.css`.
-- Partial `Views/partials/filter_tingkat.php` (select Tingkatan X/XI/XII, `Libraries/Tingkat.php`).
+  `data-order-col`), `a[data-pdf]`/`form[data-pdf]` (pratinjau PDF di `#pdfModal`, Unduh = `?unduh=1` → attachment
+  di `Pdf::respond`). CSS `public/assets/css/panel.css`.
+- Server utama RAM 1 GB: dompdf maks ±400 kartu per PDF (`Dokumen::MAKS_KARTU`, lebih → daftar tautan per
+  ruang/kelas `dokumen/kartu_bagian`); gambar di PDF besar pakai path berkas (chroot `writable/uploads`), bukan data-URI.
+- Partial `Views/partials/filter_tingkat.php` (select Tingkatan X/XI/XII lalu "Semua", `Libraries/Tingkat.php`);
+  `Tingkat::dariRequest()` bawaan X, pilihan diingat di sesi `filter_tingkat` (dipakai juga ekspor tanpa ?tingkat=).
 
 Menu → controller:
 | Menu | Controller | Catatan |
 |---|---|---|
 | Dashboard | Dashboard | stat via `dashboard/stats` (JSON) |
-| Daftar Peserta | Peserta | impor AIOCBT (`Excel::read`, header baris 9), No. Peserta = username bila kosong |
+| Daftar Peserta | Peserta | pengawas: `peserta_ruang` (`Peserta::ruang`, baca saja, ruangnya; tautan kotak siswa di dashboard); impor AIOCBT (`Excel::read`, header baris 9), No. Peserta = username bila kosong |
 | Status Test / Token | StatusTes | kategori Moodle = tes; simpan → hanya mapel dicentang + kategori itu tampil, lainnya disembunyikan; token bersama (`ActiveTest`, cron `cbt:token`) |
 | Status Peserta | StatusPeserta | paksa submit, tambah waktu; tombol "Hapus attempt…" (admin) → HapusAttempt; "Login ganda" `status_peserta/login_ganda` (log user_loggedin per IP per tanggal) |
 | Reset Login | ResetLogin | hanya dipakai saat Lock login aktif |
-| Laporan Kehadiran | Kehadiran | absensi pengawas; tidak hadir → suspend Moodle hari itu (`Absensi`) |
+| Laporan Kehadiran | Kehadiran | absensi pengawas (filter tingkatan, simpan hanya yang tampil); tidak hadir → suspend Moodle hari itu (`Absensi`); token pengawas tampil di Dashboard (`partials/token_card`, menu Token dihapus, `/token` → dashboard) dan terkunci sampai ada absensi ruangnya hari ini (`ActiveTest::terkunciUntuk`, `mapelAktif`) |
 | Blokir Siswa | BlokirSiswa | `Libraries/Blokir.php`, tabel `blokir`; tidak dibuka oleh absensi |
-| Daftar Ruang | Ruang | kode login pengawas `NPSN-<huruf><no><2 acak>` (`Pengawas::usernameFor`), Tukar Akses, Generate Kode, Cetak ID Login (`pdf/id_login`), nama lab (`ruang.lokasi`) |
-| Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: logo sekolah kiri + logo kanan `logo2` dari Info Sekolah, jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir, berita acara, absensi ruang |
+| Daftar Ruang | Ruang | kode login pengawas `NPSN-<huruf><no><2 acak>` (`Pengawas::usernameFor`), password 4 huruf kapital (`Pengawas::randomPassword`), Tukar Akses, Generate Kode, Cetak ID Login (`pdf/id_login`), nama lab (`ruang.lokasi`) |
+| Dokumen | Dokumen | kartu login peserta per ruang/kelas (`pdf/kartu`: logo sekolah kiri + logo kanan `logo2` dari Info Sekolah, jam ujian per tingkatan `jam_<X|XI|XII>_mulai/selesai`, `catatan_kartu`), daftar hadir; Laporan Kehadiran admin `dokumen/laporan_kehadiran` 2 tab: `?tab=pengawas` (rekap absensi pengawas, `Absensi::rekap($tgl,$tingkat)`, view `dokumen/absensi`; alamat lama `dokumen/absensi` dialihkan) dan `?tab=ujian` (hadir = punya attempt, berita acara) |
 | Hasil Ujian / No Attempt | HasilUjian / NoAttempt | tab `?tab=cepat` "Selesai terlalu cepat" (pw/pm/pn: % batas waktu, % median, % nilai) |
 | Tools | Tools | accordion: Moodle Tools (Kelola Test `tools/test_manage`, Cron, Purge/Delete cache, Anti Submit) + CBTAdmin Tools (Info Sekolah, Info Kegiatan, Lock/Resume/Anti Newtab, Ganti Password) + Lainnya (akun, panel, backup, log) |
 

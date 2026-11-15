@@ -6,7 +6,7 @@
         <div class="card">
             <div class="card-header fw-semibold">Cetak kartu peserta atau daftar hadir</div>
             <div class="card-body">
-                <form method="get" target="_blank" id="cetakForm">
+                <form method="get" target="_blank" id="cetakForm" data-pdf>
                     <div class="mb-3">
                         <span class="form-label d-block">Cetak</span>
                         <div class="btn-group" role="group" aria-label="Cetak per">
@@ -37,7 +37,7 @@
                             </select>
                         </div>
                         <div class="col-sm-6">
-                            <?= view('partials/filter_tingkat', ['tingkat' => '', 'size' => '', 'autoSubmit' => false]) ?>
+                            <?= view('partials/filter_tingkat', ['tingkat' => \App\Libraries\Tingkat::dariRequest(), 'size' => '', 'autoSubmit' => false]) ?>
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label" for="fSesi">Sesi</label>

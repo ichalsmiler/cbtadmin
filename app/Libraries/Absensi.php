@@ -103,9 +103,11 @@ class Absensi
     }
 
     /** Rekap per ruang untuk satu tanggal. */
-    public static function rekap(string $tanggal): array
+    /** Rekap per ruang untuk satu tanggal; $tingkat (X/XI/XII) membatasi siswanya. diisi_oleh = akun pengawas yang menyimpan. */
+    public static function rekap(string $tanggal, string $tingkat = ''): array
     {
-        $db = db_connect();
+        $db    = db_connect();
+        $where = $tingkat !== '' ? ' AND p.kelas REGEXP ' . $db->escape(Tingkat::regexp($tingkat)) : '';
 
         return $db->query(
             "SELECT r.id, r.nama, r.pengawas,
@@ -113,9 +115,10 @@ class Absensi
                     SUM(a.status = 'hadir') AS hadir,
                     SUM(a.status = 'tidak_hadir') AS tidak_hadir,
                     SUM(a.diblokir = 1) AS diblokir,
-                    MAX(a.updated_at) AS terakhir
+                    MAX(a.updated_at) AS terakhir,
+                    GROUP_CONCAT(DISTINCT a.dicatat_oleh ORDER BY a.dicatat_oleh SEPARATOR ', ') AS diisi_oleh
                FROM ruang r
-               LEFT JOIN peserta p ON p.ruang_id = r.id
+               LEFT JOIN peserta p ON p.ruang_id = r.id{$where}
                LEFT JOIN absensi a ON a.peserta_id = p.id AND a.tanggal = ?
               GROUP BY r.id, r.nama, r.pengawas
               ORDER BY LENGTH(r.nama), r.nama",

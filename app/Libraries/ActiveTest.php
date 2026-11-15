@@ -65,6 +65,30 @@ class ActiveTest
         return self::token() === '' || time() >= self::nextReleaseAt();
     }
 
+    /** Nama mapel yang dibuka (kursus tampil di kategori aktif), dipisah koma; '' bila belum ada tes. */
+    public static function mapelAktif(): string
+    {
+        if (self::categoryId() === 0) {
+            return '';
+        }
+        $kursus = array_filter(Moodle::coursesInCategory(self::categoryId()), static fn ($c) => (int) $c['visible'] === 1);
+
+        return implode(', ', array_column($kursus, 'fullname'));
+    }
+
+    /**
+     * Token disembunyikan dari pengawas ruang ini sampai absensi ruangnya hari ini disimpan
+     * (minimal satu siswa, karena absensi bisa per tingkatan). Admin ($ruangId null) tidak dikunci.
+     */
+    public static function terkunciUntuk(?int $ruangId): bool
+    {
+        if ($ruangId === null || ! self::tokenEnabled()) {
+            return false;
+        }
+
+        return db_connect()->table('absensi')->where('ruang_id', $ruangId)->where('tanggal', date('Y-m-d'))->countAllResults() === 0;
+    }
+
     public static function newToken(): string
     {
         $token = '';

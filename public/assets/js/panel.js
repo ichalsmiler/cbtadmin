@@ -2,6 +2,31 @@
 (function () {
     'use strict';
 
+    // ---------------------------------------------------------------- Perubahan belum disimpan
+    // Isian formulir POST (pengaturan, nama ruang, absensi, ...) yang diubah lalu ditinggal tanpa
+    // Simpan memunculkan peringatan browser. Tidak berlaku untuk filter (GET), centang baris tabel
+    // massal (data-bulk), formulir di modal, atau elemen/formulir ber-data-no-dirty.
+    var dirty = false;
+    function watchDirty(event) {
+        var el = event.target;
+        var form = el && el.form;
+        if (!form || (form.getAttribute('method') || 'get').toLowerCase() !== 'post') { return; }
+        if (form.matches('[data-bulk], [data-no-dirty]') || el.matches('[data-no-dirty]') || form.closest('.modal')) { return; }
+        dirty = true;
+    }
+    document.addEventListener('input', watchDirty);
+    document.addEventListener('change', watchDirty);
+    // Dikirim (dan tidak dibatalkan handler lain, mis. konfirmasi): perubahan dianggap tersimpan.
+    // Dipasang lewat setTimeout supaya berjalan setelah handler submit lain di berkas ini.
+    setTimeout(function () {
+        document.addEventListener('submit', function (event) { if (!event.defaultPrevented) { dirty = false; } });
+    }, 0);
+    window.addEventListener('beforeunload', function (event) {
+        if (!dirty) { return; }
+        event.preventDefault();
+        event.returnValue = 'Perubahan belum disimpan.';
+    });
+
     // ---------------------------------------------------------------- Konfirmasi
     var pendingAction = null;
     function confirmThen(text, action) {
@@ -14,6 +39,7 @@
         okButton.addEventListener('click', function () {
             var action = pendingAction;
             pendingAction = null;
+            dirty = false;  // aksi ini mengirim formulir / pindah halaman dengan sengaja
             if (action) { action(); }
         });
     }
@@ -81,6 +107,53 @@
         bootstrap.Modal.getOrCreateInstance(modal).show();
     });
 
+    // ---------------------------------------------------------------- Pratinjau PDF
+    // Tautan a[data-pdf] dan formulir form[data-pdf] (GET) dibuka di modal dulu; tombol Unduh
+    // meminta berkas yang sama dengan ?unduh=1 (Content-Disposition: attachment).
+    function showPdf(url) {
+        var modal = document.getElementById('pdfModal');
+        var frame = document.getElementById('pdfFrame');
+        var loading = document.getElementById('pdfLoading');
+        loading.classList.remove('d-none');
+        var download = document.getElementById('pdfDownload');
+        var setDownload = function (u) { download.href = u + (u.indexOf('?') < 0 ? '?' : '&') + 'unduh=1'; };
+        frame.onload = function () {
+            loading.classList.add('d-none');
+            // Isi bingkai bisa berpindah (mis. daftar kartu per ruang → PDF ruang itu): Unduh ikut berkas yang tampil.
+            try {
+                var shown = frame.contentWindow.location.href;
+                if (shown && shown !== 'about:blank') { setDownload(shown); }
+            } catch (e) { /* lain asal: biarkan */ }
+        };
+        frame.src = url;
+        setDownload(url);
+        bootstrap.Modal.getOrCreateInstance(modal).show();
+    }
+    var pdfModal = document.getElementById('pdfModal');
+    if (pdfModal) {
+        pdfModal.addEventListener('hidden.bs.modal', function () { document.getElementById('pdfFrame').src = 'about:blank'; });
+        document.getElementById('pdfPrint').addEventListener('click', function () {
+            var frame = document.getElementById('pdfFrame');
+            try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch (e) { window.open(frame.src, '_blank'); }
+        });
+    }
+    document.addEventListener('click', function (event) {
+        var link = event.target.closest('a[data-pdf]');
+        if (!link || event.ctrlKey || event.metaKey || event.shiftKey) { return; }
+        event.preventDefault();
+        showPdf(link.href);
+    });
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        if (!form.matches || !form.matches('form[data-pdf]')) { return; }
+        event.preventDefault();
+        var submitter = event.submitter;
+        var action = (submitter && submitter.getAttribute('formaction')) || form.action;
+        var params = new URLSearchParams(new FormData(form, submitter || undefined));
+        var query = params.toString();
+        showPdf(action + (query ? (action.indexOf('?') < 0 ? '?' : '&') + query : ''));
+    });
+
     // ---------------------------------------------------------------- Tabel
     var tables = [];
     document.querySelectorAll('table.datatable').forEach(function (el) {
@@ -97,6 +170,22 @@
                 paginate: { first: '«', last: '»', next: '›', previous: '‹' }
             }
         }));
+        // data-toolbar="#id": pindahkan "Tampilkan n baris" dan "Cari" ke baris filter itu (sejajar).
+        var toolbar = el.dataset.toolbar && document.querySelector(el.dataset.toolbar);
+        var wrap = el.closest('.dt-container');
+        if (toolbar && wrap) {
+            var length = wrap.querySelector('.dt-length');
+            var search = wrap.querySelector('.dt-search');
+            if (length) {
+                // Jangan ikut terkirim saat formulir filter (GET) dikirim.
+                length.querySelectorAll('select').forEach(function (s) { s.removeAttribute('name'); });
+                toolbar.appendChild(length);
+            }
+            if (search) { search.classList.add('ms-auto'); toolbar.appendChild(search); }
+            // Baris atas DataTables yang kini kosong disembunyikan.
+            var top = wrap.querySelector('.dt-layout-row');
+            if (top && !top.querySelector('.dt-length, .dt-search, .dt-info, .dt-paging, table')) { top.classList.add('d-none'); }
+        }
     });
 
     function tableOf(form) {

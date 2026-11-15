@@ -12,6 +12,9 @@ use App\Libraries\Tingkat;
 
 class Dokumen extends PanelController
 {
+    /** Kartu maksimal dalam satu PDF; lebih dari itu dipecah per ruang/kelas. */
+    private const MAKS_KARTU = 400;
+
     // ------------------------------------------------------------------ Kartu / Daftar Hadir
 
     public function cetak(): string
@@ -50,6 +53,19 @@ class Dokumen extends PanelController
             $groups[$label][] = $r;
         }
         uksort($groups, 'strnatcasecmp');
+
+        // Terlalu banyak untuk satu PDF (dompdf kehabisan memori di server 1 GB): tampilkan tautan per kelompok.
+        if (count($rows) > self::MAKS_KARTU && count($groups) > 1) {
+            $query = $this->request->getGet();
+            unset($query['unduh']);
+            $links = [];
+            foreach ($groups as $label => $anggota) {
+                $q = $perKelas ? ['kelas' => $anggota[0]['kelas']] : ['ruang' => $anggota[0]['ruang_id'] === null ? '0' : (string) $anggota[0]['ruang_id']];
+                $links[] = ['label' => $label, 'jumlah' => count($anggota), 'url' => site_url('dokumen/cetak_doc/kartu') . '?' . http_build_query($q + $query)];
+            }
+
+            return view('dokumen/kartu_bagian', ['links' => $links, 'total' => count($rows), 'maks' => self::MAKS_KARTU]);
+        }
         ActivityLog::add('cetak_kartu', count($rows) . ' kartu, per ' . ($perKelas ? 'kelas' : 'ruang') . ', ' . count($groups) . ' kelompok');
 
         // Jam ujian per tingkatan (Tools → Info Kegiatan).
@@ -138,9 +154,29 @@ class Dokumen extends PanelController
 
     // ------------------------------------------------------------------ Laporan Kehadiran
 
+    /**
+     * Laporan Kehadiran, dua tab: "pengawas" (absensi yang diisi pengawas tiap ruang, per tanggal)
+     * dan "ujian" (hadir = punya attempt di quiz, dengan Berita Acara).
+     */
     public function kehadiran(): string
     {
-        return $this->render('dokumen/kehadiran', $this->rekap() + ['title' => 'Laporan Kehadiran']);
+        if ($this->request->getGet('tab') === 'ujian') {
+            return $this->render('dokumen/kehadiran', $this->rekap() + ['title' => 'Laporan Kehadiran', 'tab' => 'ujian']);
+        }
+
+        $tanggal = (string) $this->request->getGet('tanggal');
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $tanggal) || ! strtotime($tanggal)) {
+            $tanggal = date('Y-m-d');
+        }
+        $tingkat = Tingkat::dariRequest();
+
+        return $this->render('dokumen/absensi', [
+            'title'   => 'Laporan Kehadiran',
+            'tab'     => 'pengawas',
+            'tanggal' => $tanggal,
+            'tingkat' => $tingkat,
+            'rows'    => \App\Libraries\Absensi::rekap($tanggal, $tingkat),
+        ]);
     }
 
     public function kehadiranExport()

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Libraries\Absensi;
 use App\Libraries\ActivityLog;
 use App\Libraries\Excel;
+use App\Libraries\Tingkat;
 
 /**
  * Laporan Kehadiran: pengawas mengabsen siswa ruangnya hari ini (siswa tidak hadir
@@ -22,19 +23,23 @@ class Kehadiran extends PanelController
 
         if ($ruangId === 0) {
             if ($isAdmin) {
-                return redirect()->to(site_url('dokumen/absensi'));
+                return redirect()->to(site_url('dokumen/laporan_kehadiran') . '?tab=pengawas');
             }
 
             return $this->render('kehadiran/index', ['title' => 'Laporan Kehadiran', 'ruang' => null, 'rows' => [], 'tanggal' => $tanggal, 'isAdmin' => false]);
         }
 
-        $ruang = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
+        $ruang   = db_connect()->table('ruang')->where('id', $ruangId)->get()->getRowArray();
+        $tingkat = Tingkat::dariRequest();
+        // Filter tingkatan: simpan hanya mengubah siswa yang tampil, jadi absen bisa per tingkatan.
+        $rows = $ruang ? array_values(array_filter(Absensi::forRuang($ruangId, $tanggal), static fn ($r) => Tingkat::cocok((string) $r['kelas'], $tingkat))) : [];
 
         return $this->render('kehadiran/index', [
             'title'   => 'Laporan Kehadiran',
             'ruang'   => $ruang,
-            'rows'    => $ruang ? Absensi::forRuang($ruangId, $tanggal) : [],
+            'rows'    => $rows,
             'tanggal' => $tanggal,
+            'tingkat' => $tingkat,
             'isAdmin' => $isAdmin,
         ]);
     }
@@ -44,7 +49,8 @@ class Kehadiran extends PanelController
         $isAdmin = session()->get('admin_role') === 'admin';
         $ruangId = $this->myRuang() ?? ($isAdmin ? (int) $this->request->getPost('ruang_id') : 0);
         $tanggal = $isAdmin ? $this->tanggal((string) $this->request->getPost('tanggal')) : date('Y-m-d');
-        $back    = site_url('kehadiran') . ($isAdmin ? '?ruang=' . $ruangId . '&tanggal=' . $tanggal : '');
+        $tingkat = in_array($this->request->getPost('tingkat'), Tingkat::LIST, true) ? (string) $this->request->getPost('tingkat') : '';
+        $back    = site_url('kehadiran') . '?' . http_build_query(array_filter(['ruang' => $isAdmin ? $ruangId : '', 'tanggal' => $isAdmin ? $tanggal : '', 'tingkat' => $tingkat]));
         if ($ruangId === 0) {
             return redirect()->to($back)->with('error', 'Akun ini belum terhubung ke ruang.');
         }
@@ -78,15 +84,10 @@ class Kehadiran extends PanelController
 
     // ------------------------------------------------------------------ Rekap admin
 
-    public function rekap(): string
+    /** Alamat lama "Absensi Ruang": kini tab Absensi Pengawas di Laporan Kehadiran. */
+    public function rekap()
     {
-        $tanggal = $this->tanggal();
-
-        return $this->render('dokumen/absensi', [
-            'title'   => 'Absensi Ruang',
-            'tanggal' => $tanggal,
-            'rows'    => Absensi::rekap($tanggal),
-        ]);
+        return redirect()->to(site_url('dokumen/laporan_kehadiran') . '?' . http_build_query(['tab' => 'pengawas', 'tanggal' => $this->tanggal()]));
     }
 
     public function buka()
@@ -109,9 +110,13 @@ class Kehadiran extends PanelController
     public function export()
     {
         $tanggal = $this->tanggal();
+        $tingkat = Tingkat::dariRequest();
         $rows    = [];
-        foreach (Absensi::rekap($tanggal) as $r) {
+        foreach (Absensi::rekap($tanggal, $tingkat) as $r) {
             foreach (Absensi::forRuang((int) $r['id'], $tanggal) as $p) {
+                if (! Tingkat::cocok((string) $p['kelas'], $tingkat)) {
+                    continue;
+                }
                 $rows[] = [
                     $r['nama'], $p['nomor_peserta'], $p['username'], $p['nama'], $p['kelas'],
                     match ($p['status']) { Absensi::HADIR => 'Hadir', Absensi::TIDAK_HADIR => 'Tidak hadir', default => 'Belum diabsen' },

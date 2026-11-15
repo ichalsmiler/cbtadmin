@@ -114,7 +114,7 @@ $badge = ['finished' => 'success', 'inprogress' => 'primary', 'notstarted' => 's
             <span class="small text-muted">Nilai skala 0–<?= $num($stats['skala']) ?></span>
             <div class="ms-auto d-flex gap-2">
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/export') . '?' . $query ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel</a>
-                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/pdf') . '?' . $query ?>" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('hasil_ujian/pdf') . '?' . $query ?>" target="_blank" data-pdf><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
             </div>
         </div>
         <div class="card-body">

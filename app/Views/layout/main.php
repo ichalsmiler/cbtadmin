@@ -4,17 +4,20 @@ $menu = [
     ['Dashboard', 'house', ''],
     ['Daftar Peserta', 'person', null, [['Data CBTAdmin', 'daftar_peserta/cbtadmin'], ['Data Moodle', 'daftar_peserta/moodle']]],
     ['Status Test', 'check-square', 'status_tes'],
-    ['Token', 'key', 'token'],
     ['Status Peserta', 'people', 'status_peserta'],
     ['Laporan Kehadiran', 'clipboard-check', 'kehadiran'],
     ['Blokir Siswa', 'slash-circle', 'blokir_siswa'],
     ['No Attempt Check', 'file-earmark-x', 'noattempt_check'],
     ['Daftar Ruang', 'door-open', 'daftar_ruang'],
-    ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Absensi Ruang', 'dokumen/absensi'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
+    ['Dokumen', 'file-text', null, [['Kartu / Daftar Hadir', 'dokumen/cetak_doc'], ['Laporan Kehadiran', 'dokumen/laporan_kehadiran']]],
     ['Hasil Ujian', 'award', 'hasil_ujian'],
     ['Tools', 'gear', 'tools'],
     ['Keluar', 'box-arrow-right', 'logout'],
 ];
+// Pengawas: Daftar Peserta = siswa di ruangnya (baca saja).
+if ($adminRole !== 'admin') {
+    $menu[1] = ['Daftar Peserta', 'person', 'peserta_ruang'];
+}
 // Lock login aktif (Tools): peserta yang masih tercatat login perlu di-reset pengawas.
 if (\App\Libraries\Settings::get('lock_login', '0') === '1') {
     array_splice($menu, 5, 0, [['Reset Login Peserta', 'person-x', 'reset_login']]);
@@ -44,7 +47,7 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
         <form class="ms-auto me-2" method="post" action="<?= site_url('daftar_ruang/kembali') ?>">
             <?= csrf_field() ?>
             <button class="btn btn-warning btn-sm" type="submit" title="Kembali ke akun administrator">
-                <i class="bi bi-arrow-left-right me-1"></i>Kembali ke Admin
+                <i class="bi bi-arrow-left-right"></i><span class="d-none d-sm-inline ms-1">Kembali ke Admin</span>
             </button>
         </form>
     <?php endif ?>
@@ -125,6 +128,25 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                 <button type="button" class="btn btn-danger" id="confirmOk">Ya, lanjutkan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="pdfModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header gap-2">
+                <h5 class="modal-title me-auto"><i class="bi bi-file-earmark-pdf me-1"></i>Pratinjau PDF</h5>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="pdfPrint"><i class="bi bi-printer me-1"></i>Cetak</button>
+                <a class="btn btn-primary btn-sm" id="pdfDownload" href="#"><i class="bi bi-download me-1"></i>Unduh</a>
+                <button type="button" class="btn-close ms-1" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            </div>
+            <div class="modal-body p-0 position-relative" style="height: 80vh">
+                <div class="position-absolute top-50 start-50 translate-middle text-center text-muted" id="pdfLoading">
+                    <div class="spinner-border mb-2" role="status"></div><div class="small">Menyiapkan PDF…</div>
+                </div>
+                <iframe id="pdfFrame" title="Pratinjau PDF" class="w-100 h-100 border-0 position-relative"></iframe>
             </div>
         </div>
     </div>

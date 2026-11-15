@@ -10,8 +10,8 @@ $cards = $isAdmin ? [
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ] : [
-    ['ruang', $myRuang !== null ? 'Ruang' : 'Total Ruang', 'teal', 'door-open', null],
-    ['users', $myRuang !== null ? 'Siswa di Ruang' : 'Total Siswa', 'yellow', 'people', null],
+    ['ruang', $myRuang !== null ? 'No Ruang' : 'Total Ruang', 'teal', 'door-open', null],
+    ['users', $myRuang !== null ? 'Siswa di Ruang' : 'Total Siswa', 'yellow', 'people', 'peserta_ruang'],
     ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
     ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
 ];
@@ -27,6 +27,10 @@ $bars = $isAdmin ? [
         Nama Kegiatan belum diatur (<a class="alert-link" href="<?= site_url('tools') ?>">Tools → Nama Kegiatan</a>).
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
     </div>
+<?php endif ?>
+
+<?php if ($token !== null): ?>
+    <?= view('partials/token_card', ['token' => $token]) ?>
 <?php endif ?>
 
 <div class="alert alert-danger <?= $stats['moodleError'] ? '' : 'd-none' ?>" id="moodleError" role="alert">

@@ -10,6 +10,9 @@ foreach ($groups as $label => $rows) {
 }
 $kegiatan = mb_strtoupper($school['nama_kegiatan'] !== '' ? $school['nama_kegiatan'] : 'Ujian Berbasis Komputer');
 $tahun    = $school['tahun_ajaran'] !== '' ? 'TAHUN PELAJARAN ' . mb_strtoupper($school['tahun_ajaran']) : '';
+// Logo dirujuk sebagai berkas (bukan data-URI) agar ribuan kartu tidak membengkakkan HTML; dompdf memuatnya sekali.
+$logoFile  = \App\Libraries\School::logoPath();
+$logo2File = \App\Libraries\School::logo2Path();
 ?>
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8">
@@ -53,13 +56,13 @@ $tahun    = $school['tahun_ajaran'] !== '' ? 'TAHUN PELAJARAN ' . mb_strtoupper(
                         <div class="kartu">
                             <table class="head">
                                 <tr>
-                                    <td class="logo"><?php if ($school['logo']): ?><img src="<?= $school['logo'] ?>" alt=""><?php endif ?></td>
+                                    <td class="logo"><?php if ($logoFile): ?><img src="<?= esc($logoFile, 'attr') ?>" alt=""><?php endif ?></td>
                                     <td class="judul">
                                         KARTU LOGIN PESERTA<br>
                                         <?= esc($kegiatan) ?>
                                         <?= $tahun !== '' ? '<br>' . esc($tahun) : '' ?>
                                     </td>
-                                    <td class="qr"><?php if ($school['logo2']): ?><img src="<?= $school['logo2'] ?>" alt=""><?php endif ?></td>
+                                    <td class="qr"><?php if ($logo2File): ?><img src="<?= esc($logo2File, 'attr') ?>" alt=""><?php endif ?></td>
                                 </tr>
                             </table>
                             <table class="isi">

@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 <?php
-$query = http_build_query(array_filter(['quiz' => $quizId ?: '', 'ruang' => $ruangId, 'tingkat' => $tingkat], static fn ($v) => $v !== ''));
+$query = http_build_query(array_filter(['tab' => 'ujian', 'quiz' => $quizId ?: '', 'ruang' => $ruangId, 'tingkat' => $tingkat], static fn ($v) => $v !== ''));
 $total = array_sum(array_column($ruang, 'total'));
 $hadir = array_sum(array_column($ruang, 'hadir'));
 ?>
@@ -10,9 +10,11 @@ $hadir = array_sum(array_column($ruang, 'hadir'));
     <div class="alert alert-danger" role="alert">Database Moodle tidak bisa dibaca. Periksa pengaturan <code>moodle.*</code> di berkas <code>.env</code>.</div>
 <?php endif ?>
 
+<?= view('partials/tab_kehadiran', ['tab' => 'ujian']) ?>
 <div class="card mb-3">
     <div class="card-body">
         <form class="d-flex flex-wrap gap-2 align-items-end" method="get" action="<?= site_url('dokumen/laporan_kehadiran') ?>">
+            <input type="hidden" name="tab" value="ujian">
             <div class="flex-grow-1" style="min-width: 240px">
                 <label class="form-label small mb-1" for="fQuiz">Mata pelajaran (quiz)</label>
                 <select class="form-select form-select-sm" id="fQuiz" name="quiz" required>
@@ -45,7 +47,7 @@ $hadir = array_sum(array_column($ruang, 'hadir'));
             <span class="small text-muted">Hadir <?= $hadir ?> dari <?= $total ?> peserta</span>
             <div class="ms-auto d-flex gap-2">
                 <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('dokumen/laporan_kehadiran/export') . '?' . $query ?>"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel</a>
-                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('dokumen/laporan_kehadiran/berita_acara') . '?' . $query ?>" target="_blank"><i class="bi bi-file-earmark-pdf me-1"></i>Berita Acara PDF</a>
+                <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('dokumen/laporan_kehadiran/berita_acara') . '?' . $query ?>" target="_blank" data-pdf><i class="bi bi-file-earmark-pdf me-1"></i>Berita Acara PDF</a>
             </div>
         </div>
         <div class="table-responsive">

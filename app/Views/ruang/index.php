@@ -12,7 +12,7 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
             <button class="btn btn-outline-primary btn-sm" type="button" data-ruang='{"id":"","nama":"","kapasitas":"","pengawas":"","sesi_id":""}'>
                 <i class="bi bi-plus-lg me-1"></i>Tambah Ruang
             </button>
-            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_ruang/cetak') ?>" target="_blank">
+            <a class="btn btn-outline-secondary btn-sm" href="<?= site_url('daftar_ruang/cetak') ?>" target="_blank" data-pdf>
                 <i class="bi bi-printer me-1"></i>Cetak ID Login
             </a>
         </div>
@@ -42,16 +42,13 @@ $waktu = static fn (?string $d): string => $d ? date('d/m H:i', strtotime($d)) :
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="ruang-avatar text-bg-<?= $warna[$i % count($warna)] ?>"><?= chr(65 + $i % 26) ?></span>
-                                    <div>
-                                        <div class="fw-semibold text-nowrap"><?= esc($r['username'] ?? '–') ?></div>
-                                        <div class="small text-primary">Ruang <?= esc($r['nama']) ?><?= $r['sesi_nama'] ? ' · ' . esc($r['sesi_nama']) : '' ?></div>
-                                    </div>
+                                    <div class="fw-semibold text-nowrap"><?= esc($r['username'] ?? '–') ?></div>
                                 </div>
                             </td>
                             <td><code><?= esc((string) $r['password_plain']) ?></code></td>
                             <td>
                                 <input form="lokasiForm" class="form-control form-control-sm" name="lokasi[<?= (int) $r['id'] ?>]"
-                                       value="<?= esc($r['lokasi'], 'attr') ?>" maxlength="120" placeholder="Masukkan nama ruang / lab"
+                                       value="<?= esc(trim((string) $r['lokasi']) !== '' ? $r['lokasi'] : 'Ruang ' . $r['nama'], 'attr') ?>" maxlength="120" placeholder="Masukkan nama ruang / lab"
                                        aria-label="Nama ruang untuk Ruang <?= esc($r['nama'], 'attr') ?>">
                             </td>
                             <td class="text-center"><?= (int) $r['jumlah_peserta'] ?><?= (int) $r['kapasitas'] > 0 ? ' / ' . (int) $r['kapasitas'] : '' ?></td>

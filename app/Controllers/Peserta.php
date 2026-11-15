@@ -15,6 +15,25 @@ class Peserta extends PanelController
     private const USERNAME_RE = '/^[a-z0-9._@-]{2,100}$/';
     private const COLUMNS     = ['nomor_peserta', 'nama', 'kelas', 'username', 'password', 'ruang', 'sesi'];
 
+    // ------------------------------------------------------------------ Pengawas
+
+    /** Daftar peserta di ruang pengawas (baca saja); admin bisa memilih ruang lewat ?ruang=. */
+    public function ruang(): string
+    {
+        $ruangId = $this->myRuang() !== null ? (string) $this->myRuang() : (string) $this->request->getGet('ruang');
+        $ruang   = $ruangId !== '' ? db_connect()->table('ruang')->where('id', (int) $ruangId)->get()->getRowArray() : null;
+
+        return $this->render('peserta/ruang', [
+            'title'     => 'Daftar Peserta' . ($ruang ? ' · Ruang ' . $ruang['nama'] : ''),
+            'rows'      => $ruangId !== '' ? $this->pesertaRows('', $ruangId) : [],
+            'ruang'     => $ruang,
+            'ruangId'   => $ruangId,
+            'ruangList' => $this->ruangList(),
+            'lockRuang' => $this->myRuang() !== null,
+            'tingkat'   => Tingkat::dariRequest(),
+        ]);
+    }
+
     // ------------------------------------------------------------------ Data CBTAdmin
 
     public function cbtadmin(): string

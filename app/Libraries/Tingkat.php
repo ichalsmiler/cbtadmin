@@ -18,12 +18,27 @@ class Tingkat
         return $tingkat === '' || self::of($kelas) === $tingkat;
     }
 
-    /** Nilai tingkatan dari request GET, divalidasi. */
+    /** Tingkatan bawaan bila belum pernah dipilih. */
+    public const BAWAAN = 'X';
+
+    /**
+     * Tingkatan terpilih: dari ?tingkat= (''/semua = semua tingkatan) lalu diingat di sesi, sehingga
+     * menu lain dan ekspor (Excel/PDF) yang tidak membawa ?tingkat= memakai pilihan terakhir.
+     * Belum pernah memilih → Kelas X.
+     */
     public static function dariRequest(): string
     {
-        $t = strtoupper(trim((string) service('request')->getGet('tingkat')));
+        $raw = service('request')->getGet('tingkat');
+        if ($raw === null) {
+            $simpan = session()->get('filter_tingkat');
 
-        return in_array($t, self::LIST, true) ? $t : '';
+            return is_string($simpan) && ($simpan === '' || in_array($simpan, self::LIST, true)) ? $simpan : self::BAWAAN;
+        }
+        $t = strtoupper(trim((string) $raw));
+        $t = in_array($t, self::LIST, true) ? $t : '';
+        session()->set('filter_tingkat', $t);
+
+        return $t;
     }
 
     /** Pola SQL REGEXP untuk kolom kelas, mis. '^XI([^A-Z]|$)'. */

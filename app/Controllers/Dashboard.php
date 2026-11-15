@@ -12,7 +12,27 @@ class Dashboard extends PanelController
 {
     public function index(): string
     {
+        // Kartu token di atas dashboard: besar untuk pengawas (terkunci sampai absensi ruangnya hari ini
+        // disimpan), ringkas untuk admin (dengan tautan ke Status Test).
+        $mapel = '';
+        try {
+            $mapel = ActiveTest::mapelAktif();
+        } catch (\Throwable $e) {
+            log_message('error', 'Token dashboard: ' . $e->getMessage());
+        }
+        $kunci = ActiveTest::terkunciUntuk($this->myRuang());
+        $token = [
+            'mapel'   => $mapel,
+            'enabled' => ActiveTest::tokenEnabled(),
+            'menit'   => ActiveTest::tokenMinutes(),
+            'token'   => $kunci ? '' : ActiveTest::token(),
+            'next'    => $kunci ? 0 : ActiveTest::nextReleaseAt(),
+            'kunci'   => $kunci,
+            'ringkas' => $this->isAdmin(),
+        ];
+
         return $this->render('dashboard/index', [
+            'token'        => $token,
             'title'        => 'Dashboard',
             'isAdmin'      => $this->isAdmin(),
             'myRuang'      => $this->myRuang(),

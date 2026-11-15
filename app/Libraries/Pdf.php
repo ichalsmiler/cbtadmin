@@ -19,6 +19,7 @@ class Pdf
         $options->set('isRemoteEnabled', false);
         $options->set('tempDir', WRITEPATH . 'cache');
         $options->set('fontCache', WRITEPATH . 'cache');
+        $options->setChroot([WRITEPATH . 'uploads']);  // gambar (logo) boleh dibaca dari berkas unggahan
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml(view($view, $data + ['school' => School::info()]));
@@ -29,7 +30,7 @@ class Pdf
 
         return service('response')
             ->setHeader('Content-Type', 'application/pdf')
-            ->setHeader('Content-Disposition', 'inline; filename="' . $safe . '"')
+            ->setHeader('Content-Disposition', (service('request')->getGet('unduh') ? 'attachment' : 'inline') . '; filename="' . $safe . '"')
             ->setBody($dompdf->output());
     }
 }

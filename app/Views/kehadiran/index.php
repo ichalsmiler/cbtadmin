@@ -13,12 +13,19 @@ $sudah = count(array_filter($rows, static fn ($r) => $r['status'] !== null));
         <span class="fw-semibold">Ruang <?= esc($ruang['nama']) ?> · <?= $tgl($tanggal) ?></span>
         <span class="text-muted small"><?= count($rows) ?> siswa · <?= $sudah ?> sudah diabsen</span>
         <?php if ($isAdmin): ?>
-            <a class="ms-auto small" href="<?= site_url('dokumen/absensi') ?>?tanggal=<?= esc($tanggal, 'url') ?>">&laquo; Rekap semua ruang</a>
+            <a class="ms-auto small" href="<?= site_url('dokumen/laporan_kehadiran') ?>?tab=pengawas&amp;tanggal=<?= esc($tanggal, 'url') ?>">&laquo; Rekap semua ruang</a>
         <?php endif ?>
     </div>
     <div class="card-body">
+        <form class="d-flex flex-wrap gap-2 align-items-end mb-3" method="get" action="<?= site_url('kehadiran') ?>">
+            <?php if ($isAdmin): ?>
+                <input type="hidden" name="ruang" value="<?= (int) $ruang['id'] ?>">
+                <input type="hidden" name="tanggal" value="<?= esc($tanggal, 'attr') ?>">
+            <?php endif ?>
+            <?= view('partials/filter_tingkat', ['tingkat' => $tingkat]) ?>
+        </form>
         <?php if ($rows === []): ?>
-            <p class="text-muted mb-0">Belum ada siswa di ruang ini.</p>
+            <p class="text-muted mb-0"><?= $tingkat !== '' ? 'Tidak ada siswa kelas ' . esc($tingkat) . ' di ruang ini.' : 'Belum ada siswa di ruang ini.' ?></p>
         <?php else: ?>
             <p class="small text-muted">
                 Tandai setiap siswa lalu klik <strong>Simpan</strong>. Siswa yang <strong>tidak hadir</strong> langsung diblokir
@@ -26,6 +33,7 @@ $sudah = count(array_filter($rows, static fn ($r) => $r['status'] !== null));
             </p>
             <form method="post" action="<?= site_url('kehadiran/simpan') ?>" id="absenForm">
                 <?= csrf_field() ?>
+                <input type="hidden" name="tingkat" value="<?= esc($tingkat, 'attr') ?>">
                 <?php if ($isAdmin): ?>
                     <input type="hidden" name="ruang_id" value="<?= (int) $ruang['id'] ?>">
                     <input type="hidden" name="tanggal" value="<?= esc($tanggal, 'attr') ?>">
