@@ -2,28 +2,28 @@
 
 <?= $this->section('content') ?>
 <?php
-// [kunci statistik, label, warna, ikon, tautan]
+// [kunci statistik, label, warna, ikon, tautan]; warna = arti status (panel.css): netral, proses, ok (sudah), awas (perlu perhatian), redup (belum).
 $cards = $isAdmin ? [
-    ['ruang', 'Total Ruang', 'teal', 'door-open', 'daftar_ruang'],
-    ['users', 'Total User', 'yellow', 'people', 'daftar_peserta/moodle'],
-    ['aktif', 'User Aktif', 'indigo', 'person-check', 'reset_login'],
-    ['belum', 'Belum Submit', 'pink', 'hourglass-split', 'status_peserta/inprogress'],
-    ['sudah', 'Sudah Submit', 'green', 'check2-circle', 'status_peserta/finished'],
+    ['ruang', 'Total Ruang', 'netral', 'door-open', 'daftar_ruang'],
+    ['users', 'Total User', 'netral', 'people', 'daftar_peserta/moodle'],
+    ['aktif', 'User Aktif', 'netral', 'person-check', 'reset_login'],
+    ['belum', 'Belum Submit', 'proses', 'hourglass-split', 'status_peserta/inprogress'],
+    ['sudah', 'Sudah Submit', 'ok', 'check2-circle', 'status_peserta/finished'],
 ] : [
     // Pengawas: sesi yang sedang ujian (mis. "Sesi Aktif (Kelas X)") dan jumlah siswa ruangnya di sesi itu.
-    ['ruang', $myRuang !== null ? 'Sesi Aktif' . ($sesiAktif !== null && $sesiAktif['tingkat'] !== '' ? ' (Kelas ' . $sesiAktif['tingkat'] . ')' : '') : 'Total Ruang', 'teal', 'calendar-check', null],
-    ['users', $myRuang !== null ? ($sesiAktif !== null ? 'Siswa di Ruang (sesi aktif)' : 'Siswa di Ruang') : 'Total Siswa', 'yellow', 'people', 'peserta_ruang'],
+    ['ruang', $myRuang !== null ? 'Sesi Aktif' . ($sesiAktif !== null && $sesiAktif['tingkat'] !== '' ? ' (Kelas ' . $sesiAktif['tingkat'] . ')' : '') : 'Total Ruang', 'netral', 'calendar-check', null],
+    ['users', $myRuang !== null ? ($sesiAktif !== null ? 'Siswa di Ruang (sesi aktif)' : 'Siswa di Ruang') : 'Total Siswa', 'netral', 'people', 'peserta_ruang'],
     // Urutan pantauan: belum login → belum mulai → mengerjakan → sudah submit (tautan ke daftar nama di bawah).
-    ['belumLogin', 'Belum Login', 'gray', 'person-x', '#pantau-belumLogin'],
-    ['belumMulai', 'Belum Mulai', 'orange', 'hourglass', '#pantau-belumMulai'],
-    ['belum', 'Mengerjakan', 'pink', 'pencil-square', '#pantau-mengerjakan'],
-    ['sudah', 'Sudah Submit', 'green', 'check2-circle', '#pantau-sudah'],
+    ['belumLogin', 'Belum Login', 'redup', 'person-x', '#pantau-belumLogin'],
+    ['belumMulai', 'Belum Mulai', 'awas', 'hourglass', '#pantau-belumMulai'],
+    ['belum', 'Mengerjakan', 'proses', 'pencil-square', '#pantau-mengerjakan'],
+    ['sudah', 'Sudah Submit', 'ok', 'check2-circle', '#pantau-sudah'],
 ];
 $pantauKolom = [
-    'belumLogin'  => ['Belum login', 'gray', 'Belum masuk Moodle hari ini'],
-    'belumMulai'  => ['Belum mulai', 'orange', 'Sudah login, belum membuka soal'],
-    'mengerjakan' => ['Mengerjakan', 'pink', 'Sedang mengerjakan soal'],
-    'sudah'       => ['Sudah submit', 'green', 'Ujian hari ini sudah selesai'],
+    'belumLogin'  => ['Belum login', 'redup', 'Belum masuk Moodle hari ini'],
+    'belumMulai'  => ['Belum mulai', 'awas', 'Sudah login, belum membuka soal'],
+    'mengerjakan' => ['Mengerjakan', 'proses', 'Sedang mengerjakan soal'],
+    'sudah'       => ['Sudah submit', 'ok', 'Ujian hari ini sudah selesai'],
 ];
 $bars = $isAdmin ? [
     ['cpu', 'CPU', $stats['sys']['cpu']['cores'] . ' core · ' . $stats['sys']['cpu']['model']],
@@ -69,7 +69,7 @@ $bars = $isAdmin ? [
                 <div class="stat-value" data-stat="<?= $key ?>"><?= $stats[$key] === null ? '–' : (is_int($stats[$key]) ? number_format($stats[$key], 0, ',', '.') : esc($stats[$key])) ?></div>
                 <div class="stat-label"><?= esc($label) ?></div>
                 <?php if ($link !== null): ?>
-                    <a class="stat-link" href="<?= $link[0] === '#' ? $link : site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">&raquo;</a>
+                    <a class="stat-link" href="<?= $link[0] === '#' ? $link : site_url($link) ?>" aria-label="Buka <?= esc($label) ?>">Lihat</a>
                 <?php endif ?>
             </div>
         </div>

@@ -1,106 +1,252 @@
-:root {
-    --navy: #1f2235;
-    --page-bg: #f1f3f7;
-    --sidebar-w: 250px;
-    --topbar-h: 56px;
-    --accent: #2f6fed;
-    --line: #e4e7ee;
-    --ink: #2a2e3d;
-    --muted: #6b7286;
+/*
+ * CBT Admin: tampilan panel (lihat DESIGN.md).
+ * Warna dari logo sekolah: navy (garis luar logo), biru (aksi), emas (aksen tunggal: garis bilah atas + token).
+ * Dial: ENERGY 2 / RHYTHM 2 / MOTION 1 (hanya transisi hover/focus, tanpa animasi berulang).
+ */
+
+/* ------------------------------------------------------------------ Token warna: terang (bawaan) */
+:root,
+[data-bs-theme="light"] {
+    --navy: #172a5a;          /* bilah atas, judul, angka penting */
+    --brand: #1f66ad;         /* aksi utama, menu aktif, tautan: 5,9:1 di atas putih */
+    --brand-soft: #e8f0fa;    /* latar menu aktif / ikon kartu */
+    --gold: #f0b400;          /* aksen tunggal; tidak untuk teks di atas putih */
+    --gold-soft: #fff4d1;
+    --page-bg: #f2f4f8;
+    --surface: #ffffff;
+    --surface-2: #f7f9fc;     /* hover baris/menu */
+    --line: #dfe4ec;
+    --ink: #1d2433;
+    --muted: #5b6478;         /* 6,0:1 di atas putih, 5,5:1 di atas --page-bg */
+    --topbar-ink: #ffffff;
+    --topbar-muted: #c3cde3;  /* 9,3:1 di atas navy */
+    --ok: #1e7a47;            /* status "sudah": hijau tua agar teks tetap 4,5:1 */
+    --warn: #9a6200;          /* status "perlu perhatian" sebagai teks */
+    --warn-fill: #f0b400;
+    --idle: #6b7280;
+    --sidebar-w: 248px;
+    --topbar-h: 58px;
+    --radius: .6rem;
+    --radius-sm: .4rem;
+    --shadow-raise: 0 1px 2px rgba(23, 42, 90, .06), 0 2px 8px rgba(23, 42, 90, .05);
+
+    --bs-body-bg: var(--page-bg);
+    --bs-body-color: var(--ink);
+    --bs-secondary-color: var(--muted);
+    --bs-border-color: var(--line);
+    --bs-link-color: var(--brand);
+    --bs-link-color-rgb: 31, 102, 173;
+    --bs-link-hover-color: var(--navy);
+    --bs-link-hover-color-rgb: 23, 42, 90;
+    --bs-primary: #1f66ad;
+    --bs-primary-rgb: 31, 102, 173;
+    --bs-focus-ring-color: rgba(31, 102, 173, .35);
 }
 
-body { background: var(--page-bg); color: var(--ink); font-size: .95rem; }
+/* ------------------------------------------------------------------ Token warna: gelap */
+[data-bs-theme="dark"] {
+    --navy: #0c1733;
+    --brand: #6ea8e6;         /* 6,9:1 di atas --surface gelap */
+    --brand-soft: #1b2b48;
+    --gold: #f0b400;
+    --gold-soft: #3a2f0e;
+    --page-bg: #0f1522;
+    --surface: #171f30;
+    --surface-2: #1d2739;
+    --line: #2b364c;
+    --ink: #e4e9f2;
+    --muted: #a3aec3;         /* 7,4:1 di atas --surface gelap */
+    --topbar-ink: #ffffff;
+    --topbar-muted: #b4c0da;
+    --ok: #5cc98c;
+    --warn: #f3c64a;
+    --warn-fill: #f0b400;
+    --idle: #9aa3b2;
+    --shadow-raise: 0 1px 2px rgba(0, 0, 0, .35);
 
-/* Top bar */
+    --bs-body-bg: var(--page-bg);
+    --bs-body-color: var(--ink);
+    --bs-secondary-color: var(--muted);
+    --bs-border-color: var(--line);
+    --bs-link-color: var(--brand);
+    --bs-link-color-rgb: 110, 168, 230;
+    --bs-link-hover-color: #a9cbf1;
+    --bs-link-hover-color-rgb: 169, 203, 241;
+    --bs-primary-rgb: 110, 168, 230; /* text-primary/ikon tetap terbaca di latar gelap */
+    --bs-tertiary-bg: var(--surface-2);
+    --bs-secondary-bg: var(--surface-2);
+    --bs-focus-ring-color: rgba(110, 168, 230, .4);
+}
+
+/* Font sistem: server LAN tanpa internet, PC lab Windows (Segoe UI). */
+body {
+    background: var(--page-bg); color: var(--ink); font-size: .95rem;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Tombol utama memakai biru logo (Bootstrap bawaan #0d6efd terlalu "generik" dan bukan warna sekolah). */
+.btn-primary {
+    --bs-btn-bg: #1f66ad; --bs-btn-border-color: #1f66ad;
+    --bs-btn-hover-bg: #17528c; --bs-btn-hover-border-color: #17528c;
+    --bs-btn-active-bg: #134577; --bs-btn-active-border-color: #134577;
+    --bs-btn-disabled-bg: #1f66ad; --bs-btn-disabled-border-color: #1f66ad;
+    --bs-btn-focus-shadow-rgb: 31, 102, 173;
+}
+.btn-outline-primary {
+    --bs-btn-color: var(--brand); --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-bg: #1f66ad; --bs-btn-hover-border-color: #1f66ad; --bs-btn-hover-color: #fff;
+    --bs-btn-active-bg: #17528c; --bs-btn-active-border-color: #17528c;
+    --bs-btn-focus-shadow-rgb: 31, 102, 173;
+}
+.form-control:focus, .form-select:focus { border-color: var(--brand); box-shadow: 0 0 0 .2rem var(--bs-focus-ring-color); }
+.form-check-input:checked { background-color: #1f66ad; border-color: #1f66ad; }
+.nav-tabs .nav-link.active { color: var(--brand); font-weight: 600; }
+.nav-tabs .nav-link { color: var(--muted); }
+code { color: #b0306b; }
+[data-bs-theme="dark"] code { color: #f08cb8; }
+
+/* ------------------------------------------------------------------ Bilah atas
+   Navy + garis emas 3px di bawahnya: motif identitas (emas di atas navy seperti bintang/padi di logo). */
 .topbar {
     position: fixed; inset: 0 0 auto 0; height: var(--topbar-h); z-index: 1040;
-    display: flex; align-items: center; gap: 1rem; padding: 0 1rem;
-    background: var(--navy); color: #fff;
+    display: flex; align-items: center; gap: .9rem; padding: 0 1rem;
+    background: var(--navy); color: var(--topbar-ink);
+    border-bottom: 3px solid var(--gold);
 }
-.topbar .brand { color: #fff; font-weight: 700; letter-spacing: .06em; text-decoration: none; white-space: nowrap; }
-.topbar .school { color: #c5c9d8; border-left: 1px solid #3b4060; padding-left: 1rem; }
-.topbar .role { font-size: .75rem; font-weight: 600; letter-spacing: .08em; color: #c5c9d8; white-space: nowrap; }
+.topbar .brand { display: flex; align-items: center; gap: .6rem; color: var(--topbar-ink); text-decoration: none; white-space: nowrap; }
+.topbar .brand img { width: 32px; height: 32px; object-fit: contain; background: #fff; border-radius: var(--radius-sm); padding: 2px; }
+.topbar .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.topbar .brand-name { font-weight: 700; font-size: 1.02rem; }
+.topbar .brand-school { font-size: .76rem; color: var(--topbar-muted); }
+.topbar .role { font-size: .8rem; font-weight: 600; color: var(--topbar-muted); white-space: nowrap; }
+.topbar .role strong { color: var(--topbar-ink); font-weight: 600; }
+.topbar .btn-tema {
+    width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--topbar-ink); border: 1px solid rgba(255, 255, 255, .25); border-radius: var(--radius-sm); background: transparent;
+}
+.topbar .btn-tema:hover { background: rgba(255, 255, 255, .1); }
+.topbar .btn-tema:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.topbar .btn-menu { color: var(--topbar-ink); width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; }
 
-/* Sidebar */
-.sidebar { background: #fff; --bs-offcanvas-width: var(--sidebar-w); }
+/* ------------------------------------------------------------------ Sidebar */
+.sidebar { background: var(--surface); --bs-offcanvas-width: var(--sidebar-w); --bs-offcanvas-bg: var(--surface); }
 @media (min-width: 992px) {
     .sidebar {
         position: fixed; top: var(--topbar-h); bottom: 0; left: 0; width: var(--sidebar-w);
-        border-right: 1px solid var(--line); overflow-y: auto; padding: .75rem 0;
+        border-right: 1px solid var(--line); overflow-y: auto; padding: .9rem .6rem;
+        background-color: var(--surface) !important; /* offcanvas-lg Bootstrap memaksa transparan di layar lebar */
     }
     .content { margin-left: var(--sidebar-w); }
 }
-@media (max-width: 991.98px) { .sidebar { padding-top: calc(var(--topbar-h) + .5rem); } }
+@media (max-width: 991.98px) { .sidebar { padding: calc(var(--topbar-h) + .75rem) .6rem .75rem; } }
 
 .sidebar .nav-link {
-    display: flex; align-items: center; gap: .75rem;
-    padding: .6rem 1.25rem; color: var(--ink); border-left: 3px solid transparent;
+    display: flex; align-items: center; gap: .75rem; min-height: 42px;
+    padding: .5rem .85rem; margin-bottom: 2px; color: var(--ink); border-radius: var(--radius-sm);
+    transition: background-color .12s, color .12s;
 }
-.sidebar .nav-link > .bi:first-child { font-size: 1.1rem; color: var(--muted); }
-.sidebar .nav-link:hover { background: #f5f7fb; }
-.sidebar .nav-link.active { color: var(--accent); background: #eef3fe; border-left-color: var(--accent); font-weight: 600; }
-.sidebar .nav-link.active > .bi { color: var(--accent); }
+.sidebar .nav-link > .bi:first-child { font-size: 1.05rem; color: var(--muted); width: 1.2rem; text-align: center; }
+.sidebar .nav-link:hover { background: var(--surface-2); color: var(--ink); }
+.sidebar .nav-link:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.sidebar .nav-link.active { color: var(--brand); background: var(--brand-soft); font-weight: 600; }
+.sidebar .nav-link.active > .bi { color: var(--brand); }
 .sidebar .caret { margin-left: auto; font-size: .75rem; transition: transform .15s; }
 .sidebar .has-sub:not(.collapsed) .caret { transform: rotate(90deg); }
-.sidebar .submenu .nav-link { padding-left: 3.2rem; font-size: .9rem; }
+.sidebar .submenu .nav-link { padding-left: 2.85rem; font-size: .9rem; min-height: 38px; }
+.sidebar .nav-keluar { margin-top: .5rem; border-top: 1px solid var(--line); padding-top: .5rem; }
 
-/* Content */
-.content { padding: calc(var(--topbar-h) + 1.5rem) 1.5rem 0; min-height: 100vh; display: flex; flex-direction: column; }
-.page-title { font-size: 1.75rem; font-weight: 600; margin-bottom: 1.25rem; }
-.card { border: 1px solid var(--line); border-radius: .5rem; }
-.card-header { background: #fff; border-bottom: 1px solid var(--line); }
+/* ------------------------------------------------------------------ Isi halaman */
+.content { padding: calc(var(--topbar-h) + 1.75rem) 1.75rem 0; min-height: 100vh; display: flex; flex-direction: column; }
+@media (max-width: 575.98px) { .content { padding: calc(var(--topbar-h) + 1.1rem) 1rem 0; } }
+.page-title { font-size: 1.6rem; font-weight: 700; color: var(--navy); margin-bottom: 1.4rem; letter-spacing: -.01em; }
+[data-bs-theme="dark"] .page-title { color: var(--ink); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.card-header {
+    background: var(--surface); border-bottom: 1px solid var(--line);
+    padding: .8rem 1.1rem; border-radius: var(--radius) var(--radius) 0 0 !important;
+}
+.card-header.fw-semibold, .card-header .fw-semibold { color: var(--navy); }
+[data-bs-theme="dark"] .card-header.fw-semibold, [data-bs-theme="dark"] .card-header .fw-semibold { color: var(--ink); }
+.card-body { padding: 1.1rem; }
+.table { --bs-table-bg: transparent; --bs-table-hover-bg: var(--surface-2); }
+.table > thead th { font-size: .82rem; font-weight: 600; color: var(--muted); border-bottom-color: var(--line); white-space: nowrap; }
+.modal-content, .dropdown-menu { background: var(--surface); border-color: var(--line); }
+.accordion { --bs-accordion-bg: var(--surface); --bs-accordion-active-bg: var(--brand-soft); --bs-accordion-active-color: var(--brand); --bs-accordion-border-color: var(--line); }
+
 .footer {
-    margin-top: auto; padding: 1.25rem 0; display: flex; justify-content: space-between;
+    margin-top: auto; padding: 1.5rem 0 1.25rem; display: flex; justify-content: space-between;
     color: var(--muted); font-size: .85rem;
 }
 .footer a { color: var(--muted); }
 
-/* Stat cards */
+/* ------------------------------------------------------------------ Kartu statistik
+   Angka adalah fokus; warna hanya untuk status nyata (netral, proses, sudah, perlu perhatian, belum). */
 .stat-card {
-    position: relative; overflow: hidden; background: #fff; border: 1px solid var(--line);
-    border-radius: .5rem; padding: 1.1rem 1.25rem 1rem;
+    position: relative; height: 100%; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 1rem 1.1rem 1.05rem; box-shadow: var(--shadow-raise);
+    display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label ikon" "nilai ikon" "nilai link";
+    column-gap: .75rem;
 }
-.stat-value { font-size: 2rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.stat-label { color: var(--muted); margin-top: .25rem; }
-.stat-link { position: absolute; right: 1rem; bottom: .6rem; font-size: 1.25rem; text-decoration: none; color: var(--stat); }
+.stat-label { grid-area: label; color: var(--muted); font-size: .85rem; font-weight: 600; }
+.stat-value {
+    grid-area: nilai; font-size: 2.1rem; font-weight: 700; line-height: 1.15; margin-top: .2rem;
+    color: var(--stat-ink, var(--navy)); font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+}
+[data-bs-theme="dark"] .stat-value { color: var(--stat-ink, var(--ink)); }
 .stat-ribbon {
-    position: absolute; top: 0; right: 0; width: 3.25rem; height: 3.25rem;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--stat); color: #fff; font-size: 1.3rem; border-bottom-left-radius: .9rem;
+    grid-area: ikon; width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-sm); background: var(--stat-soft, var(--brand-soft)); color: var(--stat, var(--brand)); font-size: 1.15rem;
 }
-.stat-teal { --stat: #17a89a; }
-.stat-yellow { --stat: #e0a100; }
-.stat-indigo { --stat: #5b5fd6; }
-.stat-pink { --stat: #e0558b; }
-.stat-green { --stat: #2f9e5b; }
-.stat-gray { --stat: #6c757d; }
-.stat-orange { --stat: #e8710a; }
+.stat-link {
+    grid-area: link; align-self: end; justify-self: end; font-size: .8rem; font-weight: 600; text-decoration: none;
+    color: var(--brand); padding: .25rem 0;
+}
+.stat-link:hover { text-decoration: underline; }
+/* Arti warna kartu (lihat dashboard/index.php). */
+.stat-netral { --stat: var(--brand); --stat-soft: var(--brand-soft); }
+.stat-proses { --stat: var(--brand); --stat-soft: var(--brand-soft); --stat-ink: var(--brand); }
+.stat-ok { --stat: var(--ok); --stat-soft: color-mix(in srgb, var(--ok) 14%, transparent); --stat-ink: var(--ok); }
+.stat-awas { --stat: var(--warn); --stat-soft: var(--gold-soft); --stat-ink: var(--warn); }
+.stat-redup { --stat: var(--idle); --stat-soft: color-mix(in srgb, var(--idle) 14%, transparent); }
 
-/* Dashboard pengawas: Pantauan Siswa (kolom per kelompok, garis warna = kartu statistiknya). */
-.pantau-kolom { border-top: 3px solid var(--stat); padding-top: .6rem; height: 100%; }
-.pantau-judul { font-weight: 600; display: flex; align-items: center; gap: .4rem; }
-.pantau-jumlah { background: var(--stat); color: #fff; }
+/* Dashboard pengawas: Pantauan Siswa (kolom per kelompok; garis atas = warna kartunya). */
+.pantau-kolom { border-top: 3px solid var(--stat); padding-top: .7rem; height: 100%; }
+.pantau-judul { font-weight: 600; display: flex; align-items: center; gap: .45rem; }
+.pantau-jumlah { background: var(--stat-soft); color: var(--stat-ink, var(--stat)); font-variant-numeric: tabular-nums; }
 .pantau-daftar { padding-left: 1.4rem; margin: 0; max-height: 22rem; overflow-y: auto; font-size: .875rem; }
-.pantau-daftar li { padding: .15rem 0; }
-.pantau-daftar li small { display: block; color: var(--bs-secondary-color); }
+.pantau-daftar li { padding: .2rem 0; border-bottom: 1px solid var(--line); }
+.pantau-daftar li:last-child { border-bottom: 0; }
+.pantau-daftar li small { display: block; color: var(--muted); }
 
 .sysinfo dt { color: var(--muted); font-weight: 500; }
-.progress { height: 1.1rem; }
-.progress-bar { background: var(--accent); font-size: .7rem; transition: width .4s; }
-.progress-bar.warn { background: #e0a100; }
-.progress-bar.crit { background: #d6453d; }
+.progress { height: 1.1rem; background: var(--surface-2); }
+.progress-bar { background: var(--brand); font-size: .7rem; transition: width .4s; }
+[data-bs-theme="dark"] .progress-bar { background: #1f66ad; }
+.progress-bar.warn { background: var(--warn-fill); color: #1d2433; }
+.progress-bar.crit { background: #c2362f; }
 
-/* Login */
-.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--navy); padding: 1rem; }
-.login-card { width: 100%; max-width: 360px; background: #fff; border-radius: .6rem; padding: 2rem 1.75rem; }
-.login-brand { font-weight: 700; letter-spacing: .06em; font-size: 1.25rem; text-align: center; margin-bottom: 1.5rem; color: var(--navy); }
+/* ------------------------------------------------------------------ Login */
+.login-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--navy); padding: 1rem; border-top: 4px solid var(--gold); }
+.login-card { width: 100%; max-width: 380px; background: var(--surface); color: var(--ink); border-radius: var(--radius); padding: 2rem 1.75rem 1.75rem; }
+.login-brand { text-align: center; margin-bottom: 1.5rem; }
+.login-brand .nama { font-weight: 700; font-size: 1.35rem; color: var(--navy); }
+[data-bs-theme="dark"] .login-brand .nama { color: var(--ink); }
+.login-brand .sekolah { color: var(--muted); font-size: .9rem; }
 
-/* Status Test: kotak token */
-.token-box { letter-spacing: .35em; transition: background-color .6s; }
-.token-new { background-color: #d1f2dd !important; }
-
-/* Halaman Token pengawas: besar, mudah dibaca dari jauh */
-.token-display { font-size: clamp(2.5rem, 12vw, 6rem); letter-spacing: .25em; line-height: 1.1; border-radius: 12px; padding: .25em .5em; display: inline-block; transition: background-color .6s; }
+/* ------------------------------------------------------------------ Token
+   Satu-satunya tempat emas dipakai sebagai latar: token adalah informasi paling penting bagi pengawas. */
+.token-box { letter-spacing: .35em; transition: background-color .6s; font-variant-numeric: tabular-nums; }
+.token-new { background-color: var(--gold-soft) !important; }
+.token-card { border-top: 4px solid var(--gold); }
+.token-display {
+    font-size: clamp(2.5rem, 12vw, 6rem); letter-spacing: .25em; line-height: 1.1; border-radius: var(--radius);
+    padding: .2em .45em .2em .7em; display: inline-block; transition: background-color .6s; color: var(--navy);
+    font-variant-numeric: tabular-nums;
+}
+[data-bs-theme="dark"] .token-display { color: var(--ink); }
+.token-ringkas { color: var(--navy); }
+[data-bs-theme="dark"] .token-ringkas { color: var(--ink); }
 
 /* Tabel lebar di layar sempit: hanya tabelnya yang digeser, bukan seluruh halaman. */
 .dt-layout-table > .dt-layout-full { overflow-x: auto; }
@@ -114,13 +260,26 @@ body { background: var(--page-bg); color: var(--ink); font-size: .95rem; }
 .dt-toolbar .dt-search label { margin: 0; }
 .dt-toolbar .dt-length select { width: auto; }
 .dt-toolbar .dt-search input { width: 12rem; margin: 0; }
+div.dt-container .dt-paging .dt-paging-button.current { background: var(--brand-soft) !important; border-color: var(--brand) !important; color: var(--brand) !important; }
 
 /* Status Test: tiap bagian (Token, Sesi ujian, Tes, Mata pelajaran) dipisah garis dan jarak;
    judul tebal + keterangan singkat di bawahnya, tanpa lencana nomor. */
 .tes-bagian { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--bs-border-color); }
-.tes-judul { display: block; font-weight: 600; font-size: 1rem; margin-bottom: .15rem; }
+.tes-judul { display: block; font-weight: 600; font-size: 1rem; margin-bottom: .15rem; color: var(--navy); }
+[data-bs-theme="dark"] .tes-judul { color: var(--ink); }
 .tes-ket { font-size: .85rem; color: var(--bs-secondary-color); margin-bottom: .6rem; }
 
 /* Tools → Info Kegiatan: jam ujian per tingkatan, satu baris per kelas. */
 .jam-ujian .jam-label { width: 4.5rem; flex-shrink: 0; }
 .jam-ujian .form-select { width: 7.5rem; flex: 0 0 auto; }
+
+/* Hormati pengguna yang mematikan animasi di sistemnya. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; }
+}
+
+/* Tab pil (Status Peserta, dll.) dan lencana info memakai biru logo, bukan biru bawaan Bootstrap. */
+.nav-pills { --bs-nav-pills-link-active-bg: #1f66ad; }
+.nav-pills .nav-link { color: var(--brand); }
+.nav-pills .nav-link.active { color: #fff; }
+.text-bg-primary { background-color: #1f66ad !important; }

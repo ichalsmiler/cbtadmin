@@ -42,7 +42,7 @@ Meniru AIOCBT CBTAdmin (lms.sman2makassar.sch.id/cbtadmin). Semua teks UI berbah
   `data-confirm-button` (form massal), `data-fill-modal`+`data-fill` (isi modal), `table.datatable` (DataTables,
   `data-order-col`), `a[data-pdf]`/`form[data-pdf]` (pratinjau PDF di `#pdfModal`, Unduh = `?unduh=1` → attachment
   di `Pdf::respond`; `?cetak=1` = HTML siap print browser tanpa dompdf, gambar via `tools/gambar/*`, dipakai tombol Cetak
-  Kartu Peserta (`data-no-pdf`) dan Cetak ID Login). CSS `public/assets/css/panel.css`.
+  Kartu Peserta (`data-no-pdf`) dan Cetak ID Login). CSS `public/assets/css/panel.css` (token warna terang/gelap di `:root` dan `[data-bs-theme=dark]`; arah desain di `DESIGN.md`: navy/biru/emas logo sekolah, kartu statistik `stat-netral|proses|ok|awas|redup`; tema disimpan `localStorage cbt-tema`, dipasang `partials/tema_awal`, tombol `[data-tema-toggle]`).
 - Server utama RAM 1 GB: dompdf maks ±400 kartu per PDF (`Dokumen::MAKS_KARTU`, lebih → daftar tautan per
   ruang/kelas `dokumen/kartu_bagian`); gambar di PDF besar pakai path berkas (chroot `writable/uploads`), bukan data-URI.
 - Partial `Views/partials/filter_tingkat.php` (select Tingkatan X/XI/XII lalu "Semua", `Libraries/Tingkat.php`);

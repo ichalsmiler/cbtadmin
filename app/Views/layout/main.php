@@ -31,6 +31,7 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= esc($title) ?> · CBT Admin</title>
+    <?= view('partials/tema_awal') ?>
     <link rel="stylesheet" href="<?= $asset('vendor/bootstrap.min.css') ?>">
     <link rel="stylesheet" href="<?= $asset('vendor/bootstrap-icons/bootstrap-icons.min.css') ?>">
     <link rel="stylesheet" href="<?= $asset('vendor/dataTables.bootstrap5.min.css') ?>">
@@ -38,11 +39,17 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
 </head>
 <body>
 <header class="topbar">
-    <button class="btn btn-link text-white d-lg-none me-2 p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Menu">
+    <button class="btn btn-link btn-menu d-lg-none p-0" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-label="Buka menu">
         <i class="bi bi-list fs-3"></i>
     </button>
-    <a class="brand" href="<?= site_url('/') ?>"><i class="bi bi-pc-display-horizontal me-2"></i>CBT ADMIN</a>
-    <span class="school d-none d-md-inline"><?= esc($namaSekolah) ?></span>
+    <?php // Logo sekolah yang diunggah di Info Sekolah (bila ada); tanpa logo cukup nama panel. ?>
+    <a class="brand" href="<?= site_url('/') ?>">
+        <?php if (\App\Libraries\School::logoPath() !== null): ?><img src="<?= site_url('tools/gambar/logo') ?>" alt=""><?php endif ?>
+        <span class="brand-text">
+            <span class="brand-name">CBT Admin</span>
+            <?php if ($namaSekolah !== ''): ?><span class="brand-school d-none d-sm-block"><?= esc($namaSekolah) ?></span><?php endif ?>
+        </span>
+    </a>
     <?php if (session()->get('tukar_dari')): ?>
         <form class="ms-auto me-2" method="post" action="<?= site_url('daftar_ruang/kembali') ?>">
             <?= csrf_field() ?>
@@ -51,7 +58,10 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
             </button>
         </form>
     <?php endif ?>
-    <span class="role <?= session()->get('tukar_dari') ? '' : 'ms-auto' ?>" title="<?= esc($adminNama) ?>"><?= $adminRole === 'admin' ? 'ADMINISTRATOR' : 'PENGAWAS' ?></span>
+    <span class="role d-none d-md-inline <?= session()->get('tukar_dari') ? '' : 'ms-auto' ?>"><?= $adminRole === 'admin' ? 'Administrator' : 'Pengawas' ?> · <strong><?= esc($adminNama) ?></strong></span>
+    <button class="btn-tema <?= session()->get('tukar_dari') ? '' : 'ms-auto ms-md-0' ?>" type="button" data-tema-toggle aria-label="Ganti ke mode gelap" title="Ganti mode terang/gelap">
+        <i class="bi bi-moon-stars"></i>
+    </button>
 </header>
 
 <nav class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar">
@@ -77,8 +87,8 @@ $asset    = static fn (string $file): string => base_url('assets/' . $file);
                     </ul>
                 </li>
             <?php else: ?>
-                <li class="nav-item">
-                    <a class="nav-link <?= $isActive($item[2]) ? 'active' : '' ?>" href="<?= site_url($item[2] === '' ? '/' : $item[2]) ?>">
+                <li class="nav-item<?= $item[2] === 'logout' ? ' nav-keluar' : '' ?>">
+                    <a class="nav-link <?= $isActive($item[2]) ? 'active' : '' ?>" href="<?= site_url($item[2] === '' ? '/' : $item[2]) ?>"<?= $isActive($item[2]) ? ' aria-current="page"' : '' ?>>
                         <i class="bi bi-<?= $item[1] ?>"></i><span><?= esc($item[0]) ?></span>
                     </a>
                 </li>

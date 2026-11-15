@@ -73,7 +73,8 @@ class Guard implements FilterInterface
     }
 
     /** Halaman yang boleh dibuka pengawas (proktor); administrator boleh semua. */
-    private const PROKTOR_PATHS = ['', 'dashboard/stats', 'peserta_ruang', 'status_peserta', 'reset_login', 'kehadiran', 'blokir_siswa', 'token', 'status_tes/token', 'daftar_ruang/kembali', 'logout'];
+    // tools/gambar/logo: logo sekolah di bilah atas (gambar tanda tangan tetap khusus admin).
+    private const PROKTOR_PATHS = ['', 'tools/gambar/logo', 'dashboard/stats', 'peserta_ruang', 'status_peserta', 'reset_login', 'kehadiran', 'blokir_siswa', 'token', 'status_tes/token', 'daftar_ruang/kembali', 'logout'];
 
     public static function allowed(string $role, string $path): bool
     {

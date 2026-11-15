@@ -2,6 +2,25 @@
 (function () {
     'use strict';
 
+    // ---------------------------------------------------------------- Mode terang / gelap
+    // Tema awal dipasang di <head> (partials/tema_awal); tombol di bilah atas mengganti dan menyimpannya.
+    var temaBtn = document.querySelector('[data-tema-toggle]');
+    var pasangTema = function (tema) {
+        document.documentElement.setAttribute('data-bs-theme', tema);
+        if (!temaBtn) { return; }
+        var gelap = tema === 'dark';
+        temaBtn.querySelector('.bi').className = 'bi ' + (gelap ? 'bi-sun' : 'bi-moon-stars');
+        temaBtn.setAttribute('aria-label', gelap ? 'Ganti ke mode terang' : 'Ganti ke mode gelap');
+    };
+    if (temaBtn) {
+        pasangTema(document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light');
+        temaBtn.addEventListener('click', function () {
+            var tema = document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+            pasangTema(tema);
+            try { localStorage.setItem('cbt-tema', tema); } catch (e) { /* tidak tersimpan: berlaku sampai halaman ditutup */ }
+        });
+    }
+
     // ---------------------------------------------------------------- Perubahan belum disimpan
     // Isian formulir POST (pengaturan, nama ruang, absensi, ...) yang diubah lalu ditinggal tanpa
     // Simpan memunculkan peringatan browser. Tidak berlaku untuk filter (GET), centang baris tabel
@@ -168,7 +187,7 @@
                 search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ baris',
                 info: '_START_–_END_ dari _TOTAL_', infoEmpty: 'Tidak ada data',
                 infoFiltered: '(disaring dari _MAX_)', zeroRecords: 'Tidak ada yang cocok',
-                emptyTable: 'Belum ada data',
+                emptyTable: el.dataset.kosong || 'Tidak ada data untuk pilihan ini',
                 paginate: { first: '«', last: '»', next: '›', previous: '‹' }
             }
         }));
