@@ -1,25 +1,33 @@
 # DESIGN.md: CBT Admin
 
-Arah tampilan panel, disalin dari jawaban pengguna (admin IT SMAN 2 Makassar), 15 November 2026.
+Arah tampilan panel, disalin dari jawaban pengguna (admin IT SMAN 2 Makassar).
+
+- 15 November 2026: warna logo sekolah, terang bawaan + tombol gelap.
+- 16 November 2026 (berlaku sekarang): pengguna memilih saran skill ui-ux-pro-max ("Real-Time / Operations",
+  slate gelap + hijau status, Fira Sans/Fira Code), dengan batasan antislop yang disetujui pengguna:
+  glassmorphism hanya aksen (R-10), Fira Code hanya untuk angka/token/kode (R-06).
 
 ## Identitas
-- Panel admin ujian berbasis komputer sekolah; dipakai admin dan pengawas ruang saat ujian berlangsung.
-- Warna diambil dari logo sekolah: biru navy (garis luar), biru langit (isi perisai), kuning emas (bintang, padi).
+- Panel operasional ujian sekolah; dipakai admin dan pengawas ruang selama ujian berlangsung (sering dibuka lama
+  di ruang lab); tema gelap tersedia lewat tombol untuk mengurangi silau. Logo sekolah tetap tampil di bilah atas.
 
 ## Karakter
-- Seimbang dan modern: tipografi tegas, angka statistik menonjol, transisi halus.
-- Dial: ENERGY 2 / RHYTHM 2 / MOTION 1
+- Seimbang dan modern, rapat seperti dasbor (density 8).
+- Tema bawaan TERANG (16 Nov 2026, permintaan pengguna); gelap lewat tombol.
+- Dial: ENERGY 2 / RHYTHM 2 / MOTION 1 (hanya transisi hover/focus; tanpa scroll-reveal agar data tidak berkedip
+  saat refresh otomatis).
 
 ## Palet
-- Navy `#172a5a`: bilah atas, judul, angka penting.
-- Biru `#1f66ad`: aksi utama, menu aktif, tautan (kontras 5,9:1 di atas putih).
-- Emas `#f0b400`: aksen tunggal; garis bawah bilah atas dan sorotan token. Tidak dipakai untuk teks di atas putih.
-- Warna status (hijau, kuning, merah) hanya untuk status nyata: sudah submit, peringatan, bahaya.
-- Netral: abu kebiruan untuk latar dan garis.
+- Gelap (lewat tombol): latar `#0F172A`, kartu `#1B2336`, permukaan kedua `#272F42`, teks `#F8FAFC`, teks redup `#94A3B8`,
+  bilah atas `#1E293B`.
+- Aksen tunggal hijau `#22C55E` (tombol utama berteks gelap `#0F172A`, menu aktif, tautan `#4ADE80` di mode gelap,
+  `#15803D` di mode terang).
+- Status: sudah = hijau, sedang berjalan = biru langit, perlu perhatian = kuning, belum = abu.
+- Terang (bawaan): latar `#F1F5F9`, kartu putih, teks `#0F172A`, teks redup `#475569`.
 
 ## Tipografi
-- Font sistem (`Segoe UI` di PC lab Windows): server LAN tanpa internet, tanpa unduhan font.
-- Angka statistik dan token memakai angka tabular agar tidak bergeser saat diperbarui.
+- Fira Sans (teks, 400/500/600/700) dan Fira Code (token, angka statistik, kode), berkas woff2 disimpan lokal di
+  `public/assets/fonts` (lisensi SIL OFL 1.1) karena server LAN tanpa internet.
 
-## Tema
-- Terang sebagai bawaan, dengan tombol ganti ke gelap; kedua mode harus berfungsi penuh.
+## Efek
+- Kaca (backdrop blur) hanya di bilah atas dan kartu token. Bayangan hanya untuk kartu statistik.

@@ -1,4 +1,4 @@
-<?php // Pasang tema (terang/gelap) sebelum halaman digambar agar tidak berkedip; pilihan disimpan per browser. ?>
+<?php // Pasang tema sebelum halaman digambar agar tidak berkedip. Bawaan terang (DESIGN.md); pilihan disimpan per browser. ?>
 <script>
 (function () {
     'use strict';
